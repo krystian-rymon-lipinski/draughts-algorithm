@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Checkers</string>
+
+    <string name="play">Zagraj</string>
+    <string name="stats">Statystyki</string>
+    <string name="games_history">Historia partii</string>
 </resources>
