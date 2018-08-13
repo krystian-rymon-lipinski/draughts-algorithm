@@ -6,4 +6,10 @@
 
     <color name="background">#404040</color>
     <color name="buttons">#BCBCBC</color>
+
+    <color name="whiteTile">#ebf1ef</color>
+    <color name="whitePawn">#ffffff</color>
+
+    <color name="brownTile">#9f7563</color>
+    <color name="brownPawn">#7e5d4f</color>
 </resources>

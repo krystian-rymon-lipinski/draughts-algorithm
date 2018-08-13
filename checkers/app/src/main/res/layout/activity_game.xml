@@ -1,9 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:context="com.krystian.checkers.GameActivity">
 
-</android.support.constraint.ConstraintLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="14.77"
+        android:background="#454545">
+    </LinearLayout>
+
+    <GridLayout android:id="@+id/board"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:columnCount="10"
+        android:rowCount="10"
+        android:layout_weight="70.46" >
+    </GridLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="14.77"
+        android:background="#454545">
+    </LinearLayout>
+
+</LinearLayout>
