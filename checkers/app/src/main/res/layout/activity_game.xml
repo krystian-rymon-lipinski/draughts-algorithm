@@ -19,7 +19,8 @@
         android:layout_height="0dp"
         android:columnCount="10"
         android:rowCount="10"
-        android:layout_weight="70.46" >
+        android:layout_weight="70.46"
+        android:background="@color/brownTile">
     </GridLayout>
 
     <LinearLayout

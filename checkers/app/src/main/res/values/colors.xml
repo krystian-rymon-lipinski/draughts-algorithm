@@ -4,9 +4,11 @@
     <color name="colorPrimaryDark">#202020</color>
     <color name="colorAccent">#FF4081</color>
 
+    <!-- MainActivity -->
     <color name="background">#404040</color>
     <color name="buttons">#BCBCBC</color>
 
+    <!-- Game Activity -->
     <color name="whiteTile">#ebf1ef</color>
     <color name="whitePawn">#ffffff</color>
 
