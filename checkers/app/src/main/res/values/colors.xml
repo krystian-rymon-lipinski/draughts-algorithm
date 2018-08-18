@@ -14,4 +14,6 @@
 
     <color name="brownTile">#9f7563</color>
     <color name="brownPawn">#7e5d4f</color>
+
+    <color name="possibleMove">#40FF40</color>
 </resources>
