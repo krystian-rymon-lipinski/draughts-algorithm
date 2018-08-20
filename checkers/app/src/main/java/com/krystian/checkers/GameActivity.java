@@ -8,6 +8,7 @@ import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import java.util.ArrayList;
 
+import static android.R.color.white;
 
 
 public class GameActivity extends AppCompatActivity implements View.OnClickListener {
@@ -25,7 +26,22 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     boolean whiteMove = true;
     Pawn chosenPawn; //to set new position for a specific pawn
 
-    /*===========TABLE INDEXES: 0-49; EVERYTHING ELSE VALUES (POSITIONS, ID, ETC): 1-50==========*/
+    /*===========TABLE INDEXES: 0-49; EVERYTHING ELSE VALUES (POSITIONS, ID, ETC): 1-50==========
+
+                                                 brown
+                                |   | 1 |   | 2 |   | 3 |   | 4 |   | 5 |
+                                | 6 |   | 7 |   | 8 |   | 9 |   | 10|   |
+                                |   | 11|   | 12|   | 13|   | 14|   | 15|
+                                | 16|   | 17|   | 18|   | 19|   | 20|   |
+                                |   | 21|   | 22|   | 23|   | 24|   | 25|
+                                | 26|   | 27|   | 28|   | 29|   | 30|   |
+                                |   | 31|   | 32|   | 33|   | 34|   | 35|
+                                | 36|   | 37|   | 38|   | 39|   | 40|   |
+                                |   | 41|   | 42|   | 43|   | 44|   | 45|
+                                | 46|   | 47|   | 48|   | 49|   | 50|   |
+                                                 white
+
+    */
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -87,10 +103,50 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     playableTileView[chosenPawn.getPosition() - 1].getBackground().setAlpha(255);
                     if(whiteMove) playableTile[view.getId() - 1].setIsTaken(1);
                     else playableTile[view.getId() - 1].setIsTaken(-1);
+
+                    if(!chosenPawn.getIsQueen() && Math.abs(chosenPawn.getPosition() - view.getId()) > 6) { //pawn took another pawn
+                        int rowImpact = (chosenPawn.getPosition()-1)/5%2; //finding taken pawn differs in odd and even rows
+                        int upTaking = chosenPawn.getPosition() - ( (chosenPawn.getPosition() - view.getId()) / 2 + rowImpact);
+                        int downTaking = chosenPawn.getPosition() + ((view.getId() - chosenPawn.getPosition()) / 2 + 1 - rowImpact);
+                        //upTaking - from higher tile values to smaller; white forward or brown backward
+                        //downTaking - reverse
+
+                        for(PlayableTile tile : playableTile) {
+                            if(chosenPawn.getPosition() > view.getId() && tile.getValue() == upTaking) {
+                                if(tile.getIsTaken() == -1) takePawn(true, tile.getValue()); //white forward taking
+                                else if(tile.getIsTaken() == 1) takePawn(false, tile.getValue()); //brown backward taking
+
+                            }
+                            else if (chosenPawn.getPosition() < view.getId() && tile.getValue() == downTaking ) {
+                                if(tile.getIsTaken() == -1) takePawn(true, tile.getValue()); //white backward taking
+                                else if(tile.getIsTaken() == 1) takePawn(false, tile.getValue()); //black forward taking
+                            }
+                        }
+                    }
                     chosenPawn.setPosition(view.getId());
                     chosenPawn = null;
                     whiteMove = !whiteMove;
                     drawPawns();
+                }
+            }
+        }
+    }
+
+    public void takePawn(boolean isWhite, int pos) { //isWhite == true means white just took a brown pawn
+        playableTile[pos - 1].setIsTaken(0);
+        if(isWhite) {
+            for (Pawn bPawn : brownPawn) {
+                if (bPawn.getPosition() == pos) {
+                    brownPawn.remove(bPawn);
+                    break;
+                }
+            }
+        }
+        else {
+            for (Pawn wPawn : whitePawn) {
+                if (wPawn.getPosition() == pos) {
+                    whitePawn.remove(wPawn);
+                    break;
                 }
             }
         }
@@ -146,35 +202,54 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void checkPossibleMoves(Pawn pawn) {
-        int pos = pawn.getPosition();
+        int pos = pawn.getPosition(); //it's too long to write it in every condition n times
+        int rowImpact = (pos-1)/5%2; //is row even or odd? 0-9 range; pawns pos: 0-4, 5-9... 45-49; helps with modulo
+
         if (pawn.getIsWhite()) {
-            if (!pawn.getIsQueen()) { /* TO DO: && not the last row - I mean in the last row pawn becomes queen...*/
-                if ((pos - 1) / 5 % 2 == 1) { //odd row (rows' numbers: 0-9)
-                    if (playableTile[pos - 1 - 5].getIsTaken() == 0)
-                        possibleMove.add(pos - 5); //rightMove
-                    if ((pos - 1) % 5 != 0 && playableTile[pos - 1 - 6].getIsTaken() == 0) //pawn's not at the left side of the board
-                        possibleMove.add(pos - 6); //leftMove
+            if (!pawn.getIsQueen()) {
+                if ( (rowImpact != 0 || pos%5 != 0) && playableTile[pos-1-4-rowImpact].getIsTaken() == 0) //check if pawn is at the side and if not - check if tile is free to go
+                    possibleMove.add(pos-4-rowImpact); //rightMove
+                if ( (rowImpact != 1 || (pos-1)%5 != 0) && playableTile[pos-1-5-rowImpact].getIsTaken() == 0)
+                    possibleMove.add(pos-5-rowImpact); //leftMove
+                if( pos > 10 ) {
+                    if (pos % 5 != 0 && playableTile[pos - 1 - 4 - rowImpact].getIsTaken() == -1 &&
+                            playableTile[pos - 1 - 9].getIsTaken() == 0)
+                        possibleMove.add(pos - 9); //rightForwardTake
+                    if ((pos - 1) % 5 != 0 && playableTile[pos - 1 - 5 - rowImpact].getIsTaken() == -1 &&
+                            playableTile[pos - 1 - 11].getIsTaken() == 0)
+                        possibleMove.add(pos - 11); //leftForwardTake
                 }
-                else { //even row
-                    if (playableTile[pos - 1 - 5].getIsTaken() == 0)
-                        possibleMove.add(pos - 5); //leftMove
-                    if (pos % 5 != 0 && playableTile[pos - 1 - 4].getIsTaken() == 0) //pawn's not at the left side of the board
-                        possibleMove.add(pos - 4); //rightMove
+                if(pos <= 40) {
+                    if( (pos-1)%5 != 0 && playableTile[pos-1+5-rowImpact].getIsTaken() == -1 &&
+                            playableTile[pos-1+9].getIsTaken() == 0)
+                        possibleMove.add(pos+9); //leftBackwardTake
+                    if( pos%5 != 0 && playableTile[pos-1+6-rowImpact].getIsTaken() == -1 &&
+                            playableTile[pos-1+11].getIsTaken() == 0)
+                        possibleMove.add(pos+11); //rightBackwardTake
                 }
             }
         }
         else {
             if (!pawn.getIsQueen()) {
-                if ((pos - 1) / 5 % 2 == 1) { //odd row
-                    if (playableTile[pos - 1 + 5].getIsTaken() == 0)
-                        possibleMove.add(pos + 5); //leftMove
-                    if ((pos - 1) % 5 != 0 && playableTile[pos - 1 + 4].getIsTaken() == 0)
-                        possibleMove.add(pos + 4); //rightMove
-                } else { //even row
-                    if (playableTile[pos - 1 + 5].getIsTaken() == 0)
-                        possibleMove.add(pos + 5); //rightMove
-                    if (pos % 5 != 0 && playableTile[pos - 1 + 6].getIsTaken() == 0)
-                        possibleMove.add(pos + 6); //leftMove
+                if( (rowImpact != 1 || (pos-1)%5 != 0) && playableTile[pos-1+5-rowImpact].getIsTaken() == 0 )
+                    possibleMove.add(pos+5-rowImpact); //rightMove; brown perspective - in every brown move
+                if( (rowImpact != 0 || pos%5 != 0) && playableTile[pos-1+6-rowImpact].getIsTaken() == 0 )
+                    possibleMove.add(pos+6-rowImpact); //leftMove
+                if(pos <= 40) {
+                    if( (pos-1)%5 != 0 && playableTile[pos-1+5-rowImpact].getIsTaken() == 1 &&
+                            playableTile[pos-1+9].getIsTaken() == 0)
+                        possibleMove.add(pos+9); //rightForwardTake
+                    if( pos%5 != 0 && playableTile[pos-1+6-rowImpact].getIsTaken() == 1 &&
+                            playableTile[pos-1+11].getIsTaken() == 0)
+                        possibleMove.add(pos+11); //leftForwardTake
+                }
+                if( pos > 10 ) {
+                    if (pos % 5 != 0 && playableTile[pos - 1 - 4 - rowImpact].getIsTaken() == 1 &&
+                            playableTile[pos - 1 - 9].getIsTaken() == 0)
+                        possibleMove.add(pos - 9); //leftBackwardTake
+                    if ((pos - 1) % 5 != 0 && playableTile[pos - 1 - 5 - rowImpact].getIsTaken() == 1 &&
+                            playableTile[pos - 1 - 11].getIsTaken() == 0)
+                        possibleMove.add(pos - 11); //rightBackwardTake
                 }
             }
         }
