@@ -11,6 +11,7 @@ public class PlayableTile {
 
     public int getValue() { return value; }
     public int getIsTaken() { return isTaken; }
+
     public void setValue(int value) { this.value = value; }
     public void setIsTaken(int isTaken) { this.isTaken = isTaken; }
 }

@@ -12,7 +12,7 @@
                                 |   | 41|   | 42|   | 43|   | 44|   | 45|
                                 | 46|   | 47|   | 48|   | 49|   | 50|   |
                                                  white
-    - taking pawns is mandatory (if possible); longest take is mandatory
+    - taking pawns (if possible) is mandatory; longest take is mandatory - doesn't matter if it's a queen or not
     */
 
 package com.krystian.checkers;
@@ -38,8 +38,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     ArrayList<Pawn> whitePawn = new ArrayList<>();
     ArrayList<Pawn> brownPawn = new ArrayList<>();
     ArrayList<Integer> possibleMove = new ArrayList<>();
-    //ArrayList<Integer> mandatoryMove = new ArrayList<>();
     ArrayList<Integer> mandatoryPawn = new ArrayList<>(); //position of a pawn that can take another one; there might be more than 1
+    ArrayList<ArrayList<Integer>> mandatoryMove = new ArrayList<ArrayList<Integer>>(); //there might be more possible multiple takings
     boolean whiteMove = true;
     Pawn chosenPawn; //to set new position for a specific pawn
 
@@ -90,6 +90,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     public void markPawn(Pawn wPawn, View view) {
         playableTileView[wPawn.getPosition() - 1].getBackground().setAlpha(255);
         if (wPawn.getPosition() == view.getId()) {
+            if(whiteMove) playableTileView[wPawn.getPosition() -1].setBackgroundResource(R.drawable.white_pawn); //in multiple takings
+            else playableTileView[wPawn.getPosition() -1].setBackgroundResource(R.drawable.white_pawn); //to show pawn instead of green cell (possible move)
             playableTileView[wPawn.getPosition() - 1].getBackground().setAlpha(70);
             chosenPawn = wPawn;
             checkPossibleMoves(wPawn);
@@ -99,7 +101,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     public void markPossibleMove() {
         for(View tile : playableTileView) {  //mark legal moves
             if (playableTile[tile.getId()-1].getIsTaken() == 0)
-                tile.setBackgroundColor(getResources().getColor(R.color.brownTile)); //un-mark if just switching pawn
+                tile.setBackgroundColor(getResources().getColor(R.color.brownTile)); //un-mark possible moves if just switching pawn
             for (Integer move : possibleMove)
                 if (tile.getId() == move)
                     tile.setBackgroundColor(getResources().getColor(R.color.possibleMove));
@@ -108,7 +110,9 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
     public void makeMove(View view) {
         if(chosenPawn != null) { //there is a pawn to move
+            Log.v("Moves", ""+possibleMove.size());
             for (Integer move : possibleMove) {
+                Log.v("Move", ""+move);
                 if (view.getId() == move) { //chosen tile is a valid move
                     playableTile[chosenPawn.getPosition() - 1].setIsTaken(0);
                     playableTileView[chosenPawn.getPosition() - 1].getBackground().setAlpha(255);
@@ -134,16 +138,30 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     }
                     chosenPawn.setPosition(view.getId());
-                    chosenPawn = null;
-                    whiteMove = !whiteMove;
-                    mandatoryPawn.clear();
-                    drawPawns();
-
-                    if(whiteMove) checkMandatoryMove();
-                    else checkMandatoryMove();
+                    break;
                 }
             }
+
+            if(mandatoryPawn.size() != 0) {
+                possibleMove.clear();
+                checkPossibleMoves(chosenPawn); //there might be multiple taking
+                if(possibleMove.size() != 0) {
+                    markPawn(chosenPawn, view);
+                    markPossibleMove();
+                }
+                else endMove();
+            }
+
+            else endMove();
         }
+    }
+
+    public void endMove() {
+        chosenPawn = null;
+        whiteMove = !whiteMove;
+        mandatoryPawn.clear();
+        drawPawns();
+        checkMandatoryMove();
     }
 
     public void takePawn(boolean isWhite, int pos) { //isWhite == true means white just took a brown pawn
@@ -223,15 +241,15 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             if (pawn.getIsWhite()) {
                 if(mandatoryPawn.size() == 0) checkWhiteMove(pos, rowImpact); //left/right; there are no mandatory takes
                 else {
-                    checkUpTaking(pos, rowImpact, -1); //forward take
-                    checkDownTaking(pos, rowImpact, -1); //backward take
+                    checkUpTaking(pawn, rowImpact, -1); //forward take
+                    checkDownTaking(pawn, rowImpact, -1); //backward take
                 }
             }
             else {
                 if(mandatoryPawn.size() == 0) checkBrownMove(pos, rowImpact); //left/right
                 else {
-                    checkUpTaking(pos, rowImpact, 1); //backward take
-                    checkDownTaking(pos, rowImpact, 1); //forward take
+                    checkUpTaking(pawn, rowImpact, 1); //backward take
+                    checkDownTaking(pawn, rowImpact, 1); //forward take
                 }
             }
         }
@@ -251,32 +269,34 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             possibleMove.add(pos + 6 - rowImpact); //leftMove
     }
 
-    public void checkUpTaking(int pos, int rowImpact, int takenPawn) { //taken pawn: -1 = brown, 1 = white
-        if (pos > 10) { //if you'll try to take from the last row - array out of bounds
-            if (pos % 5 != 0 && playableTile[pos - 1 - 4 - rowImpact].getIsTaken() == takenPawn &&
-                    playableTile[pos - 1 - 9].getIsTaken() == 0) {
-                if (chosenPawn != null) possibleMove.add(pos - 9); //checking mandatory taking... or showing possible moves
-                else mandatoryPawn.add(pos); //TO DO: switching pawns adds undesirable mandatory pawns
+    public void checkUpTaking(Pawn pawn, int rowImpact, int takenPawn) { //taken pawn: -1 = brown, 1 = white
+        if (pawn.getPosition() > 10) { //if you'll try to take from the last row - array out of bounds
+            if (pawn.getPosition() % 5 != 0 && playableTile[pawn.getPosition() - 1 - 4 - rowImpact].getIsTaken() == takenPawn &&
+                    playableTile[pawn.getPosition() - 1 - 9].getIsTaken() == 0) {
+                if (chosenPawn != null) possibleMove.add(pawn.getPosition() - 9); //checking mandatory taking... or showing possible moves
+                else mandatoryPawn.add(pawn.getPosition());
             }
-            if ((pos - 1) % 5 != 0 && playableTile[pos - 1 - 5 - rowImpact].getIsTaken() == takenPawn &&
-                    playableTile[pos - 1 - 11].getIsTaken() == 0) {
-                if (chosenPawn != null) possibleMove.add(pos - 11);
-                else mandatoryPawn.add(pos);
+            if ((pawn.getPosition() - 1) % 5 != 0 && playableTile[pawn.getPosition() - 1 - 5 - rowImpact].getIsTaken() == takenPawn &&
+                    playableTile[pawn.getPosition() - 1 - 11].getIsTaken() == 0) {
+                if (chosenPawn != null) possibleMove.add(pawn.getPosition() - 11);
+                else mandatoryPawn.add(pawn.getPosition());
+                    /*mandatoryMove.add(new ArrayList<Integer>());
+                    mandatoryMove.get(mandatoryMove.size()-1).add(pawn.getPosition());*/
             }
         }
     }
 
-    public void checkDownTaking(int pos, int rowImpact, int takenPawn) {
-        if (pos <= 40) {
-            if ((pos - 1) % 5 != 0 && playableTile[pos - 1 + 5 - rowImpact].getIsTaken() == takenPawn &&
-                    playableTile[pos - 1 + 9].getIsTaken() == 0) {
-                if (chosenPawn != null) possibleMove.add(pos + 9);
-                else mandatoryPawn.add(pos);
+    public void checkDownTaking(Pawn pawn, int rowImpact, int takenPawn) {
+        if (pawn.getPosition() <= 40) {
+            if ((pawn.getPosition() - 1) % 5 != 0 && playableTile[pawn.getPosition() - 1 + 5 - rowImpact].getIsTaken() == takenPawn &&
+                    playableTile[pawn.getPosition() - 1 + 9].getIsTaken() == 0) {
+                if (chosenPawn != null) possibleMove.add(pawn.getPosition() + 9);
+                else mandatoryPawn.add(pawn.getPosition()); //checking possible mandatory moves before clicking pawn
             }
-            if (pos % 5 != 0 && playableTile[pos - 1 + 6 - rowImpact].getIsTaken() == takenPawn &&
-                    playableTile[pos - 1 + 11].getIsTaken() == 0) {
-                if (chosenPawn != null) possibleMove.add(pos + 11);
-                else mandatoryPawn.add(pos);
+            if (pawn.getPosition() % 5 != 0 && playableTile[pawn.getPosition() - 1 + 6 - rowImpact].getIsTaken() == takenPawn &&
+                    playableTile[pawn.getPosition() - 1 + 11].getIsTaken() == 0) {
+                if (chosenPawn != null) possibleMove.add(pawn.getPosition() + 11);
+                else mandatoryPawn.add(pawn.getPosition());
             }
         }
     }
@@ -285,15 +305,15 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         if(whiteMove) {
             for(Pawn wPawn : whitePawn) {
                 int rowImpact = (wPawn.getPosition()-1)/5%2;
-                checkUpTaking(wPawn.getPosition(), rowImpact, -1);
-                checkDownTaking(wPawn.getPosition(), rowImpact, -1);
+                checkUpTaking(wPawn, rowImpact, -1);
+                checkDownTaking(wPawn, rowImpact, -1);
             }
         }
         else {
             for(Pawn bPawn : brownPawn) {
                 int rowImpact = (bPawn.getPosition()-1)/5%2;
-                checkUpTaking(bPawn.getPosition(), rowImpact, 1);
-                checkDownTaking(bPawn.getPosition(), rowImpact, 1);
+                checkUpTaking(bPawn, rowImpact, 1);
+                checkDownTaking(bPawn, rowImpact, 1);
             }
         }
     }
