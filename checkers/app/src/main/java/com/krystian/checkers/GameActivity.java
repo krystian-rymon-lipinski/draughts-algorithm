@@ -35,6 +35,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     GridLayout board;
     View[] playableTileView = new View[NUMBER_OF_PLAYABLE_TILES];
     PlayableTile[] playableTile = new PlayableTile[NUMBER_OF_PLAYABLE_TILES];
+    int[][] diagonal = new int[19][];
     ArrayList<Pawn> whitePawn = new ArrayList<>();
     ArrayList<Pawn> brownPawn = new ArrayList<>();
     ArrayList<Integer> possibleMove = new ArrayList<>();
@@ -49,13 +50,14 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_game);
 
         board = (GridLayout) findViewById(R.id.board);
-
+        setDiagonals();
         measureBoard(); //and draw it with pawns after that
     }
 
     public void onClick(View view) {
         if(whiteMove) {
-            if (playableTile[view.getId() - 1].getIsTaken() == 1) { //white pawn has just been clicked
+            if (playableTile[view.getId() - 1].getIsTaken() == 1 || playableTile[view.getId() - 1].getIsTaken() == 2) {
+                //white pawn (or queen) has just been clicked
                 possibleMove.clear();
                 for (Pawn wPawn : whitePawn) {
                     markPawn(wPawn, view);
@@ -67,11 +69,12 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     else markPossibleMove(); //there are no mandatory moves
                 }
             }
-            else makeMove(view); //white pawn was chosen before - this is setting his destination
+            else
+                makeMove(view); //white pawn was chosen before - this is setting his destination
             //TO DO: do not send whole object - just int with destination will do
         }
         else {
-            if (playableTile[view.getId() - 1].getIsTaken() == -1) {
+            if (playableTile[view.getId() - 1].getIsTaken() == -1 || playableTile[view.getId() - 1].getIsTaken() == -2) {
                 possibleMove.clear();
                 for (Pawn bPawn : brownPawn) {
                     markPawn(bPawn, view);
@@ -91,7 +94,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         playableTileView[wPawn.getPosition() - 1].getBackground().setAlpha(255);
         if (wPawn.getPosition() == view.getId()) {
             if(whiteMove) playableTileView[wPawn.getPosition() -1].setBackgroundResource(R.drawable.white_pawn); //in multiple takings
-            else playableTileView[wPawn.getPosition() -1].setBackgroundResource(R.drawable.white_pawn); //to show pawn instead of green cell (possible move)
+            else playableTileView[wPawn.getPosition() -1].setBackgroundResource(R.drawable.brown_pawn); //to show pawn instead of green cell (possible move)
             playableTileView[wPawn.getPosition() - 1].getBackground().setAlpha(70);
             chosenPawn = wPawn;
             checkPossibleMoves(wPawn);
@@ -109,15 +112,21 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void makeMove(View view) {
+        boolean validMove = false;
         if(chosenPawn != null) { //there is a pawn to move
-            Log.v("Moves", ""+possibleMove.size());
             for (Integer move : possibleMove) {
-                Log.v("Move", ""+move);
                 if (view.getId() == move) { //chosen tile is a valid move
                     playableTile[chosenPawn.getPosition() - 1].setIsTaken(0);
                     playableTileView[chosenPawn.getPosition() - 1].getBackground().setAlpha(255);
-                    if(whiteMove) playableTile[view.getId() - 1].setIsTaken(1);
-                    else playableTile[view.getId() - 1].setIsTaken(-1);
+                    if(!chosenPawn.getIsQueen()) {
+                        if(whiteMove) playableTile[view.getId() - 1].setIsTaken(1);
+                        else playableTile[view.getId() - 1].setIsTaken(-1);
+                    }
+                    else {
+                        if(whiteMove) playableTile[view.getId() - 1].setIsTaken(2);
+                        else playableTile[view.getId() - 1].setIsTaken(-2);
+                    }
+
 
                     if(!chosenPawn.getIsQueen() && Math.abs(chosenPawn.getPosition() - view.getId()) > 6) { //pawn took another pawn
                         int rowImpact = (chosenPawn.getPosition()-1)/5%2; //finding taken pawn differs in odd and even rows
@@ -128,35 +137,47 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
                         for(PlayableTile tile : playableTile) {
                             if(chosenPawn.getPosition() > view.getId() && tile.getValue() == upTaking) {
-                                if(tile.getIsTaken() == -1) takePawn(true, tile.getValue()); //white forward taking
-                                else if(tile.getIsTaken() == 1) takePawn(false, tile.getValue()); //brown backward taking
+                                if(tile.getIsTaken() == -1 || tile.getIsTaken() == -2) takePawn(true, tile.getValue()); //white forward taking
+                                else if(tile.getIsTaken() == 1 || tile.getIsTaken() == 2) takePawn(false, tile.getValue()); //brown backward taking
                             }
                             else if (chosenPawn.getPosition() < view.getId() && tile.getValue() == downTaking ) {
-                                if(tile.getIsTaken() == -1) takePawn(true, tile.getValue()); //white backward taking
-                                else if(tile.getIsTaken() == 1) takePawn(false, tile.getValue()); //black forward taking
+                                if(tile.getIsTaken() == -1 || tile.getIsTaken() == -2) takePawn(true, tile.getValue()); //white backward taking
+                                else if(tile.getIsTaken() == 1 || tile.getIsTaken() == 2) takePawn(false, tile.getValue()); //black forward taking
                             }
                         }
                     }
                     chosenPawn.setPosition(view.getId());
+                    validMove = true;
                     break;
                 }
             }
 
-            if(mandatoryPawn.size() != 0) {
-                possibleMove.clear();
-                checkPossibleMoves(chosenPawn); //there might be multiple taking
-                if(possibleMove.size() != 0) {
-                    markPawn(chosenPawn, view);
-                    markPossibleMove();
+            if(validMove) {
+                if(mandatoryPawn.size() != 0) {
+                    possibleMove.clear();
+                    checkPossibleMoves(chosenPawn); //there might be multiple taking
+                    if(possibleMove.size() != 0) {
+                        markPawn(chosenPawn, view);
+                        markPossibleMove();
+                    }
+                    else endMove();
                 }
                 else endMove();
             }
 
-            else endMove();
+
         }
     }
 
     public void endMove() {
+        if(chosenPawn.getIsWhite() && !chosenPawn.getIsQueen() && (chosenPawn.getPosition()-1)/5 == 0) { //white pawn promoted
+            playableTile[chosenPawn.getPosition() - 1].setIsTaken(2);
+            chosenPawn.setIsQueen(true);
+        }//pawn in the last row
+        else if(!chosenPawn.getIsWhite() && !chosenPawn.getIsQueen() && (chosenPawn.getPosition()-1)/5 == 9) {
+            playableTile[chosenPawn.getPosition() - 1].setIsTaken(-2);
+            chosenPawn.setIsQueen(true);
+        }
         chosenPawn = null;
         whiteMove = !whiteMove;
         mandatoryPawn.clear();
@@ -227,8 +248,11 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
     public void drawPawns() { //will be useful after every move
         for(int i=0; i<playableTileView.length; i++) {
+
             if(playableTile[i].getIsTaken() == 1) playableTileView[i].setBackgroundResource(R.drawable.white_pawn);
             else if(playableTile[i].getIsTaken() == -1) playableTileView[i].setBackgroundResource(R.drawable.brown_pawn);
+            else if(playableTile[i].getIsTaken() == 2) playableTileView[i].setBackgroundResource(R.drawable.white_queen);
+            else if(playableTile[i].getIsTaken() == -2) playableTileView[i].setBackgroundResource(R.drawable.brown_queen);
             else playableTileView[i].setBackgroundResource(0);
         }
     }
@@ -253,6 +277,9 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 }
             }
         }
+        else {
+            if(mandatoryPawn.size() == 0) checkDiagonals(pawn);
+        }
     }
 
     public void checkWhiteMove(int pos, int rowImpact) {
@@ -274,14 +301,19 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             if (pawn.getPosition() % 5 != 0 && playableTile[pawn.getPosition() - 1 - 4 - rowImpact].getIsTaken() == takenPawn &&
                     playableTile[pawn.getPosition() - 1 - 9].getIsTaken() == 0) {
                 if (chosenPawn != null) possibleMove.add(pawn.getPosition() - 9); //checking mandatory taking... or showing possible moves
-                else mandatoryPawn.add(pawn.getPosition());
+                else //checking possible mandatory moves before clicking pawn
+                    if(pawn.getOldPosition() != pawn.getPosition() - 9) //no take-reverse take possibilities
+                        //checkLongestTake(pawn, pawn.getPosition() - 9);
+                     mandatoryPawn.add(pawn.getPosition());
             }
             if ((pawn.getPosition() - 1) % 5 != 0 && playableTile[pawn.getPosition() - 1 - 5 - rowImpact].getIsTaken() == takenPawn &&
                     playableTile[pawn.getPosition() - 1 - 11].getIsTaken() == 0) {
                 if (chosenPawn != null) possibleMove.add(pawn.getPosition() - 11);
-                else mandatoryPawn.add(pawn.getPosition());
-                    /*mandatoryMove.add(new ArrayList<Integer>());
-                    mandatoryMove.get(mandatoryMove.size()-1).add(pawn.getPosition());*/
+                else
+                    if(pawn.getOldPosition() != pawn.getPosition() - 11) //no take-reverse take possibilities
+                        //checkLongestTake(pawn, pawn.getPosition() - 11);
+                     mandatoryPawn.add(pawn.getPosition());
+
             }
         }
     }
@@ -291,12 +323,18 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             if ((pawn.getPosition() - 1) % 5 != 0 && playableTile[pawn.getPosition() - 1 + 5 - rowImpact].getIsTaken() == takenPawn &&
                     playableTile[pawn.getPosition() - 1 + 9].getIsTaken() == 0) {
                 if (chosenPawn != null) possibleMove.add(pawn.getPosition() + 9);
-                else mandatoryPawn.add(pawn.getPosition()); //checking possible mandatory moves before clicking pawn
+                else
+                    if(pawn.getOldPosition() != pawn.getPosition() - 9) //no take-reverse take possibilities
+                        //checkLongestTake(pawn, pawn.getPosition() - 9);
+                     mandatoryPawn.add(pawn.getPosition());
             }
             if (pawn.getPosition() % 5 != 0 && playableTile[pawn.getPosition() - 1 + 6 - rowImpact].getIsTaken() == takenPawn &&
                     playableTile[pawn.getPosition() - 1 + 11].getIsTaken() == 0) {
                 if (chosenPawn != null) possibleMove.add(pawn.getPosition() + 11);
-                else mandatoryPawn.add(pawn.getPosition());
+                else
+                    if(pawn.getOldPosition() != pawn.getPosition() - 9) //no take-reverse take possibilities
+                        //checkLongestTake(pawn, pawn.getPosition() - 9);
+                     mandatoryPawn.add(pawn.getPosition());
             }
         }
     }
@@ -315,6 +353,97 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 checkUpTaking(bPawn, rowImpact, 1);
                 checkDownTaking(bPawn, rowImpact, 1);
             }
+        }
+    }
+/*
+    public void checkLongestTake(Pawn pawn, int pos) {
+        ArrayList<Integer> combination = new ArrayList<>();
+        int rowImpact = (pos-1)/5%2; //possible position of a pawn during multiple taking is changing
+        if(pawn.getTakeLength() == 0) {
+            mandatoryMove.add(combination);
+            combination.add(pos);
+        }
+        else pawn.setOldPosition(pos);
+        pawn.setTakeLength(pawn.getTakeLength() + 1);
+        pawn.setPosition(pos);
+        //pawn.setPossiblePosition(pos);
+        checkDownTaking(pawn, rowImpact, -1);
+        checkUpTaking(pawn, rowImpact, -1);
+    }*/
+
+    public void setDiagonals() {
+        diagonal[0] = new int[]{1, 6};
+        diagonal[1] = new int[]{2, 7, 11, 16};
+        diagonal[2] = new int[]{3, 8, 12, 17, 21, 26};
+        diagonal[3] = new int[]{4, 9, 13, 18, 22, 27, 31, 36};
+        diagonal[4] = new int[]{5, 10, 14, 19, 23, 28, 32, 37, 41, 46};
+        diagonal[5] = new int[]{15, 20, 24, 29, 33, 38, 42, 47};
+        diagonal[6] = new int[]{25, 30, 34, 39, 43, 48};
+        diagonal[7] = new int[]{35, 40, 44, 49};
+        diagonal[8] = new int[]{45, 50};
+        diagonal[9] = new int[]{46};
+        diagonal[10] = new int[]{36, 41, 47};
+        diagonal[11] = new int[]{26, 31, 37, 42, 48};
+        diagonal[12] = new int[]{16, 21, 27, 32, 38, 43, 49};
+        diagonal[13] = new int[]{6, 11, 17, 22, 28, 33, 39, 44, 50};
+        diagonal[14] = new int[]{1, 7, 12, 18, 23, 29, 34, 40, 45};
+        diagonal[15] = new int[]{2, 8, 13, 19, 24, 30, 35};
+        diagonal[16] = new int[]{3, 9, 14, 20, 25};
+        diagonal[17] = new int[]{4, 10, 15};
+        diagonal[18] = new int[]{5};
+    }
+
+    public void checkDiagonals(Pawn pawn) {
+        Log.v("Working?", "Hope so!");
+        int firstDiagonalIndex = 0;
+        int secondDiagonalIndex = 0;
+        for(int i=0; i<diagonal.length; i++) {
+            for(int j=0; j<diagonal[i].length; j++) {
+                if(i<9 && diagonal[i][j] == pawn.getPosition()) {
+                    pawn.setFirstDiagonal(diagonal[i]);
+                    firstDiagonalIndex = j;
+                    Log.v("First",""+pawn.getFirstDiagonal()[firstDiagonalIndex]);
+                }
+                else if(i>=9 && diagonal[i][j] == pawn.getPosition()) {
+                    pawn.setSecondDiagonal(diagonal[i]);
+                    secondDiagonalIndex = j;
+                    Log.v("Second",""+pawn.getSecondDiagonal()[secondDiagonalIndex]);
+                }
+            }
+        }
+
+        while(firstDiagonalIndex != 0) {
+            Log.v("First diagonal Index", ""+firstDiagonalIndex);
+            if(playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex-1] - 1].getIsTaken() == 0)
+                possibleMove.add(pawn.getFirstDiagonal()[firstDiagonalIndex-1]);
+            else break;
+            firstDiagonalIndex--;
+
+        }
+        while(secondDiagonalIndex != 0) {
+            Log.v("Second diagonal Index", ""+secondDiagonalIndex);
+            if(playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex-1] - 1].getIsTaken() == 0)
+                possibleMove.add(pawn.getSecondDiagonal()[secondDiagonalIndex-1]);
+            else break;
+            secondDiagonalIndex--;
+        }
+        while(firstDiagonalIndex != pawn.getFirstDiagonal().length - 1) {
+            Log.v("First diagonal Index", ""+firstDiagonalIndex);
+            if(pawn.getFirstDiagonal()[firstDiagonalIndex] >= pawn.getPosition()) { //restoring index after decrementing it
+                if(playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex+1] - 1].getIsTaken() == 0)
+                    possibleMove.add(pawn.getFirstDiagonal()[firstDiagonalIndex+1]);
+                else break;
+            }
+            firstDiagonalIndex++;
+        }
+        while(secondDiagonalIndex != pawn.getSecondDiagonal().length - 1) {
+            Log.v("Second diagonal Index", ""+secondDiagonalIndex);
+            if(pawn.getSecondDiagonal()[secondDiagonalIndex] >= pawn.getPosition()) { //restoring index after decrementing it
+                if(playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex+1] - 1].getIsTaken() == 0)
+                    possibleMove.add(pawn.getSecondDiagonal()[secondDiagonalIndex+1]);
+                else break;
+            }
+            secondDiagonalIndex++;
         }
     }
 }

@@ -5,8 +5,8 @@ public class PlayableTile {
     private int isTaken;
 
     public PlayableTile(int value, int isTaken) {
-        this.value = value;
-        this.isTaken = isTaken;
+        this.value = value; //1 - 50
+        this.isTaken = isTaken; //0 = free, 1 = white pawn, -1 = brown pawn, 2 = white queen, -2 = brown queen
     }
 
     public int getValue() { return value; }
