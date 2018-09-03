@@ -6,7 +6,7 @@ public class Pawn {
     private boolean isQueen;
     private int takeLength; //to check which pawn has the longest take and has to be moved
     private int oldPosition; //in multiple taking - to prevent checking take-reverse take for eternity
-    private int[] firstDiagonal; //to calculate possible moves when pawn becomes queen
+    private int[] firstDiagonal; //to calculate possible and mandatory  moves when pawn becomes queen
     private int[] secondDiagonal;
 
     public Pawn(int position, boolean isWhite, boolean isQueen) {
