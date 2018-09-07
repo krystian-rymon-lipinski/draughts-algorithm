@@ -38,16 +38,17 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     GridLayout board;
     View[] playableTileView = new View[NUMBER_OF_PLAYABLE_TILES];
     PlayableTile[] playableTile = new PlayableTile[NUMBER_OF_PLAYABLE_TILES];
-    int[][] diagonal = new int[19][];
+    int[][] diagonal = new int[19][]; //for queen moves
     ArrayList<Pawn> whitePawn = new ArrayList<>();
     ArrayList<Pawn> brownPawn = new ArrayList<>();
     ArrayList<Integer> possibleMove = new ArrayList<>();
-    ArrayList<DecisionTree> mandatoryPawn = new ArrayList<>(); //possible many options for taking
     boolean whiteMove = true;
-    Pawn chosenPawn; //to set new position for a specific pawn
+    Pawn chosenPawn; //to set new position and check possible moves for a specific (marked) pawn
     Pawn consideredPawn; //to check mandatory moves for every pawn
+    boolean mandatoryPawn = false; //is there a pawn (or more) that has to take another one(s)?
     boolean[] takingPossible = new boolean[]{false, false, false, false}; //to bind nodes only when there's no taking in any direction
     int pawnToTake; //pawn taken by queen
+    int takeNumber = 0; //to show possible moves during multiple taking (if there are more branches from specific node)
 
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,59 +115,48 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         int longestTake = 0;
         if(whiteMove) {
             for (Pawn wPawn : whitePawn) {
-                mandatoryPawn.add(new DecisionTree(wPawn.getPosition()));
+                wPawn.setPawnTree(new DecisionTree(wPawn.getPosition()));
                 consideredPawn = wPawn;
                 checkMandatoryMove(wPawn.getPosition(), -1);
-                /*if(mandatoryPawn.size() != 0) {
-                    Log.v("There are takings", "");
-                    if(mandatoryPawn.get(mandatoryPawn.size() - 1).getRoot() == consideredPawn.getPosition()) { //pawn has some mandatory moves
-                        Log.v("There are branches", "");
-                        DecisionTree thisTree = mandatoryPawn.get(mandatoryPawn.size()-1);
-                        TreeNode lastNode = thisTree.nodeList.get(thisTree.nodeList.size() - 1);
-                        bindTreeNodes(thisTree, lastNode);
-                    }
-                }*/
-                if(mandatoryPawn.size() > 0) {
-                    if (mandatoryPawn.get(mandatoryPawn.size() - 1).getRoot() == consideredPawn.getPosition()) { //there is a branch then
+
+                if(mandatoryPawn) {
+                    if(consideredPawn.getPawnTree() != null) { //there is a branch then
                         takeLongestBranch();
-                        if(mandatoryPawn.get(mandatoryPawn.size()-1).getLongestBranch() >= longestTake) {
-                            longestTake = mandatoryPawn.get(mandatoryPawn.size()-1).getLongestBranch();
+                        if(consideredPawn.getPawnTree().getLongestBranch() >= longestTake) {
+                            longestTake = consideredPawn.getPawnTree().getLongestBranch();
+                            Log.v("New longest", ""+consideredPawn.getPosition());
                         }
-                        else mandatoryPawn.remove(mandatoryPawn.get(mandatoryPawn.size()-1));
                     }
                 }
             }
+            chooseFinalPawn(longestTake);
         }
         else {
             for (Pawn bPawn : brownPawn) {
-                mandatoryPawn.add(new DecisionTree(bPawn.getPosition()));
+                bPawn.setPawnTree(new DecisionTree(bPawn.getPosition()));
                 consideredPawn = bPawn;
                 checkMandatoryMove(bPawn.getPosition(), 1);
 
-                /*if(mandatoryPawn.size() != 0) {
-                    Log.v("There are takings", "");
-                    if(mandatoryPawn.get(mandatoryPawn.size() - 1).getRoot() == consideredPawn.getPosition()) { //pawn has some mandatory moves
-                        Log.v("There are branches", "");
-                        DecisionTree thisTree = mandatoryPawn.get(mandatoryPawn.size()-1);
-                        TreeNode lastNode = thisTree.nodeList.get(thisTree.nodeList.size() - 1);
-                        bindTreeNodes(thisTree, lastNode);
-                    }
-                }*/
-                if(mandatoryPawn.size() > 0) {
-                    if (mandatoryPawn.get(mandatoryPawn.size() - 1).getRoot() == consideredPawn.getPosition()) { //there is a branch then
+                if(mandatoryPawn) {
+                    if(consideredPawn.getPawnTree() != null) { //there is a branch then
                         takeLongestBranch();
-                        if (mandatoryPawn.get(mandatoryPawn.size() - 1).getLongestBranch() >= longestTake) {
-                            longestTake = mandatoryPawn.get(mandatoryPawn.size() - 1).getLongestBranch();
+                        if(consideredPawn.getPawnTree().getLongestBranch() >= longestTake) {
+                            Log.v("New longest", ""+consideredPawn.getPosition());
+                            longestTake = consideredPawn.getPawnTree().getLongestBranch();
                         }
-                        else mandatoryPawn.remove(mandatoryPawn.get(mandatoryPawn.size() - 1));
                     }
                 }
             }
+            chooseFinalPawn(longestTake); //the one(s) with the longest taking possible
         }
+
+        /*for(DecisionTree pawn : mandatoryPawn) {
+            Log.v("-------All branches: ", ""+pawn.getRoot());
+        }*/
     }
 
     public void checkMandatoryMove(int position, int takenPawn) { //takenPawn = -1/-2 means brown pawn/queen can be taken
-        mandatoryPawn.get(mandatoryPawn.size()-1).setTakeLength(mandatoryPawn.get(mandatoryPawn.size()-1).getTakeLength() + 1);
+        consideredPawn.getPawnTree().setTakeLength(consideredPawn.getPawnTree().getTakeLength() + 1);
         if(!consideredPawn.getIsQueen()) {
             int rowImpact = (position-1)/5%2;
             checkUpTaking(position, rowImpact, takenPawn);
@@ -176,9 +166,10 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         }
         else checkDiagonals(consideredPawn);
 
-        if(mandatoryPawn.get(mandatoryPawn.size()-1).nodeList.size() == 1) //only root node
-            mandatoryPawn.remove(mandatoryPawn.size()-1); //that means there are no mandatory moves for this pawn
+        if(consideredPawn.getPawnTree().nodeList.size() == 1)
+            consideredPawn.setPawnTree(null);
         else {
+            mandatoryPawn = true;
             if(!takingPossible[0] && !takingPossible[1] && !takingPossible[2] && !takingPossible[3])
                 checkTreeNodes(0, 0); //no more takes in this branch
         }
@@ -231,7 +222,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void checkTreeNodes(int link, int position) {
-        DecisionTree thisTree = mandatoryPawn.get(mandatoryPawn.size()-1); //for better readability; last added tree - build for considered pawn
+        //DecisionTree thisTree = mandatoryPawn.get(mandatoryPawn.size()-1); //for better readability; last added tree - build for considered pawn
+        DecisionTree thisTree = consideredPawn.getPawnTree();
         if(position != 0) {
             if (thisTree.getTakeLength() > 1) {
                 if (position != consideredPawn.previousPosition.get(thisTree.getTakeLength() - 1)) //don't check take-reverse take for eternity
@@ -252,7 +244,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         else {
             TreeNode lastNode = thisTree.nodeList.get(thisTree.nodeList.size() - 1);
             bindTreeNodes(thisTree, lastNode);
-            consideredPawn.previousPosition.remove(consideredPawn.previousPosition.size()-1);
+            if(consideredPawn.previousPosition.size() > 1)
+                consideredPawn.previousPosition.remove(consideredPawn.previousPosition.size()-1); //there can be taking from previous turn
             thisTree.setTakeLength(thisTree.getTakeLength() - 1); //no more taking; go back one node to check different branch
             for(Integer prev : consideredPawn.previousPosition) {
                 //Log.v("Previous position: ", ""+prev);
@@ -274,29 +267,29 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
 
-        for(ArrayList<Integer> branch : thisTree.treeBranch) {
+        /*for(ArrayList<Integer> branch : thisTree.treeBranch) {
             Log.v("Branch",""+branch);
-        }
-        Log.v("Number of branches", ""+thisTree.treeBranch.size());
+        }*/
+        //Log.v("Number of branches", ""+thisTree.treeBranch.size());
         ArrayList<Integer> branchToRemove = new ArrayList<>();
         if(thisTree.treeBranch.size() > 1) { //check if there are doubled branches after recursion
             for(int i=0; i<thisTree.treeBranch.size(); i++) {
-                Log.v("i-branch", ""+i);
+                //Log.v("i-branch", ""+i);
                 for(int j=0; j<thisTree.treeBranch.size(); j++) {
-                    Log.v("j-branch", ""+j);
+                    //Log.v("j-branch", ""+j);
                     if(i!=j && thisTree.treeBranch.get(i).size() == thisTree.treeBranch.get(j).size()) {
-                        Log.v("Checking...", "");
+                        //Log.v("Checking...", "");
                         for(int k=0; k<thisTree.treeBranch.get(j).size(); k++) {
-                            if(!thisTree.treeBranch.get(i).get(k).equals(thisTree.treeBranch.get(j).get(k))) {
-                                Log.v("k-node", ""+k);
-                                Log.v("k in i-branch", ""+thisTree.treeBranch.get(i).get(k));
-                                Log.v("k in j-branch", ""+thisTree.treeBranch.get(j).get(k));
+                            if(thisTree.treeBranch.get(i).get(k) != (thisTree.treeBranch.get(j).get(k))) {
+                                //Log.v("k-node", ""+k);
+                                //Log.v("k in i-branch", ""+thisTree.treeBranch.get(i).get(k));
+                                //Log.v("k in j-branch", ""+thisTree.treeBranch.get(j).get(k));
                                 break; //branches are different
                             }
                             else
                                 if(j == thisTree.treeBranch.get(j).size()-1) {
                                     branchToRemove = thisTree.treeBranch.get(j);
-                                    Log.v("Branch to remove", ""+j);
+                                    //Log.v("Branch to remove", ""+j);
                                 }
                         }
 
@@ -306,8 +299,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         if(branchToRemove.size() > 0) {
-            Log.v("Size", ""+branchToRemove.size());
-            Log.v("ToRemove", ""+branchToRemove);
+            //Log.v("Size", ""+branchToRemove.size());
+            //Log.v("ToRemove", ""+branchToRemove);
             thisTree.treeBranch.remove(branchToRemove);
         }
 
@@ -347,20 +340,45 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         Log.v("Number of branches", ""+thisTree.treeBranch.size());
     }
 
-    public void takeLongestBranch() { //TO DO: if there is greater branch than before - remove the rest 
-        DecisionTree thisTree = mandatoryPawn.get(mandatoryPawn.size()-1);
+    public void takeLongestBranch() { //TO DO: if there is greater branch than before - remove the rest
+        DecisionTree thisTree = consideredPawn.getPawnTree();
         for(ArrayList<Integer> branch : thisTree.treeBranch) {
             if(branch.size() >= thisTree.getLongestBranch()) {
                 thisTree.setLongestBranch(branch.size());
-
             }
-            else thisTree.treeBranch.remove(branch);
         }
+
+        ArrayList<ArrayList<Integer>> branchesToRemove = new ArrayList<>();
+        for(ArrayList<Integer> branch : thisTree.treeBranch) {
+            if (branch.size() < thisTree.getLongestBranch()) {
+                branchesToRemove.add(branch);
+            }
+        }
+        thisTree.treeBranch.removeAll(branchesToRemove);
+
         Log.v("-------------", "Only longest");
         for(ArrayList<Integer> branch : thisTree.treeBranch) {
             Log.v("Branch",""+branch);
         }
         Log.v("Number of branches", ""+thisTree.treeBranch.size());
+        Log.v("Size of the longest", ""+thisTree.getLongestBranch());
+    }
+
+    public void chooseFinalPawn(int longestTake) {
+        if(whiteMove) {
+            for(Pawn wPawn: whitePawn) {
+                if(wPawn.getPawnTree() != null && wPawn.getPawnTree().getLongestBranch() < longestTake) {
+                    wPawn.setPawnTree(null);
+                }
+            }
+        }
+        else {
+            for(Pawn bPawn : brownPawn) {
+                if(bPawn.getPawnTree() != null && bPawn.getPawnTree().getLongestBranch() < longestTake) {
+                    bPawn.setPawnTree(null);
+                }
+            }
+        }
     }
 
     public void onClick(View view) {
@@ -370,10 +388,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 possibleMove.clear();
                 for (Pawn wPawn : whitePawn) {
                     markPawn(wPawn, view);
-                    if(mandatoryPawn.size() != 0) {
-                        for(DecisionTree mPawn : mandatoryPawn) {
-                            if(wPawn.getPosition() == mPawn.getRoot()) markPossibleMove();
-                        }
+                    if(mandatoryPawn) {
+                        if(wPawn.getPawnTree() != null) markPossibleMove();
                     }
                     else markPossibleMove(); //there are no mandatory moves
                 }
@@ -387,13 +403,12 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 possibleMove.clear();
                 for (Pawn bPawn : brownPawn) {
                     markPawn(bPawn, view);
-                    if(mandatoryPawn.size() != 0) {
-                        for(DecisionTree mPawn : mandatoryPawn) {
-                            if(bPawn.getPosition() == mPawn.getRoot()) markPossibleMove();
-                        }
+                    if(mandatoryPawn) {
+                        if(bPawn.getPawnTree() != null) markPossibleMove();
                     }
+                    markPossibleMove();
                 }
-                markPossibleMove();
+
             }
             else makeMove(view);
         }
@@ -421,6 +436,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void makeMove(View view) {
+        Log.v("Make Move", ""+takeNumber);
         boolean validMove = false;
         if(chosenPawn != null) { //there is a pawn to move
             for (Integer move : possibleMove) {
@@ -471,9 +487,11 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             }
 
             if(validMove) {
-                if(mandatoryPawn.size() != 0) {
+                if(mandatoryPawn) {
                     pawnToTake = 0;
                     possibleMove.clear();
+                    takeNumber++;
+                    Log.v("Valid Move", ""+takeNumber);
                     checkPossibleMoves(chosenPawn); //there might be multiple taking
                     if(possibleMove.size() != 0) {
                         markPawn(chosenPawn, view);
@@ -487,10 +505,10 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void endMove() {
-        if(chosenPawn.getIsWhite() && !chosenPawn.getIsQueen() && (chosenPawn.getPosition()-1)/5 == 0) { //white pawn promoted
-            playableTile[chosenPawn.getPosition() - 1].setIsTaken(2);
-            chosenPawn.setIsQueen(true);
-        }//pawn in the last row
+        if(chosenPawn.getIsWhite() && !chosenPawn.getIsQueen() && (chosenPawn.getPosition()-1)/5 == 0) {
+            playableTile[chosenPawn.getPosition() - 1].setIsTaken(2); //white pawn promoted
+            chosenPawn.setIsQueen(true); //pawn in the last row
+        }
         else if(!chosenPawn.getIsWhite() && !chosenPawn.getIsQueen() && (chosenPawn.getPosition()-1)/5 == 9) {
             playableTile[chosenPawn.getPosition() - 1].setIsTaken(-2);
             chosenPawn.setIsQueen(true);
@@ -499,7 +517,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         chosenPawn.previousPosition.add(chosenPawn.getPosition());
         chosenPawn = null;
         whiteMove = !whiteMove;
-        mandatoryPawn.clear();
+        mandatoryPawn = false;
+        takeNumber = 0;
         drawPawns();
     }
 
@@ -523,29 +542,30 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-
-
     public void checkPossibleMoves(Pawn pawn) {
         int pos = pawn.getPosition(); //it's too long to write it in every condition n times
         int rowImpact = (pos-1)/5%2; //is row even or odd? 0-9 range; pawns pos: 0-4, 5-9... 45-49; helps with modulo
 
         if (!pawn.getIsQueen()) {
-            if (pawn.getIsWhite()) {
-                if(mandatoryPawn.size() == 0) checkWhiteMove(pos, rowImpact); //left/right; there are no mandatory takes
-                else {
-                    checkUpTaking(pawn.getPosition(), rowImpact, -1); //forward take
-                    checkUpTaking(pawn.getPosition(), rowImpact, -2); //forward take
-                    checkDownTaking(pawn.getPosition(), rowImpact, -1); //backward take
-                    checkDownTaking(pawn.getPosition(), rowImpact, -2); //backward take
-                }
-            }
+            if(!mandatoryPawn)
+                if(whiteMove) checkWhiteMove(pos, rowImpact); //left/right; there are no mandatory takes
+                else checkBrownMove(pos, rowImpact);
             else {
-                if(mandatoryPawn.size() == 0) checkBrownMove(pos, rowImpact); //left/right
-                else {
-                    checkUpTaking(pawn.getPosition(), rowImpact, 1); //backward take
-                    checkUpTaking(pawn.getPosition(), rowImpact, 2); //backward take
-                    checkDownTaking(pawn.getPosition(), rowImpact, 1); //forward take
-                    checkDownTaking(pawn.getPosition(), rowImpact, 2); //forward take
+                if(chosenPawn.getPawnTree() != null) {
+                    for (TreeNode node : chosenPawn.getPawnTree().nodeList) { //pawn is somewhere on its decision tree
+                        if (node.getPosition() == chosenPawn.getPosition()) {  //if not - it's another pawn clicked
+                            for (ArrayList<Integer> branch : chosenPawn.getPawnTree().treeBranch) {
+                                if (takeNumber == 0) {
+                                    possibleMove.add(branch.get(takeNumber));
+                                } else {
+                                    if (branch.get(takeNumber - 1) == pawn.getPosition() && branch.size() > takeNumber) {
+                                        possibleMove.add(branch.get(takeNumber));
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
             }
         }
