@@ -1,7 +1,5 @@
 package com.krystian.checkers;
 
-import java.util.ArrayList;
-
 public class Pawn {
     private int position;
     private boolean isWhite;
@@ -9,8 +7,7 @@ public class Pawn {
     private int[] firstDiagonal; //to calculate possible and mandatory moves when pawn becomes queen
     private int[] secondDiagonal;
 
-    private DecisionTree pawnTree; //
-    public ArrayList<Integer> previousPosition = new ArrayList<>(); //in multiple taking - to prevent checking take-reverse take for eternity
+    private DecisionTree pawnTree; //to check every legal branch of taking to choose the longest one
 
     public Pawn(int position, boolean isWhite, boolean isQueen) {
         this.position = position;
@@ -18,8 +15,6 @@ public class Pawn {
         this.isQueen = isQueen;
         this.firstDiagonal = null;
         this.secondDiagonal = null;
-
-        previousPosition.add(position);
     }
 
     public Pawn(Pawn pawn) {

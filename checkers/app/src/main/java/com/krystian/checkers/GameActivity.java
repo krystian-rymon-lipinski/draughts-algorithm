@@ -23,10 +23,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
-
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-
 
 
 public class GameActivity extends AppCompatActivity implements View.OnClickListener {
@@ -46,8 +43,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     Pawn chosenPawn; //to set new position and check possible moves for a specific (marked) pawn
     Pawn consideredPawn; //to check mandatory moves for every pawn
     boolean mandatoryPawn = false; //is there a pawn (or more) that has to take another one(s)?
-    boolean[] takingPossible = new boolean[]{false, false, false, false}; //to bind nodes only when there's no taking in any direction
-    int pawnToTake; //pawn taken by queen
+    //boolean[] takingPossible = new boolean[]{false, false, false, false}; //to bind nodes only when there's no taking in any direction
     int takeNumber = 0; //to show possible moves during multiple taking (if there are more branches from specific node)
 
 
@@ -56,7 +52,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_game);
 
         board = (GridLayout) findViewById(R.id.board);
-        setDiagonals();
+        setDiagonals(); //for queen moves
         measureBoard(); //and draw it with pawns after that
     }
 
@@ -124,7 +120,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                         takeLongestBranch();
                         if(consideredPawn.getPawnTree().getLongestBranch() >= longestTake) {
                             longestTake = consideredPawn.getPawnTree().getLongestBranch();
-                            Log.v("New longest", ""+consideredPawn.getPosition());
                         }
                     }
                 }
@@ -141,7 +136,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     if(consideredPawn.getPawnTree() != null) { //there is a branch then
                         takeLongestBranch();
                         if(consideredPawn.getPawnTree().getLongestBranch() >= longestTake) {
-                            Log.v("New longest", ""+consideredPawn.getPosition());
                             longestTake = consideredPawn.getPawnTree().getLongestBranch();
                         }
                     }
@@ -149,10 +143,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             }
             chooseFinalPawn(longestTake); //the one(s) with the longest taking possible
         }
-
-        /*for(DecisionTree pawn : mandatoryPawn) {
-            Log.v("-------All branches: ", ""+pawn.getRoot());
-        }*/
     }
 
     public void checkMandatoryMove(int position, int takenPawn) { //takenPawn = -1/-2 means brown pawn/queen can be taken
@@ -164,14 +154,13 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             checkDownTaking(position, rowImpact, takenPawn);
             checkDownTaking(position, rowImpact, 2*takenPawn);
         }
-        else checkDiagonals(consideredPawn);
+        else checkQueenTakes(position);
 
-        if(consideredPawn.getPawnTree().nodeList.size() == 1)
+        if(consideredPawn.getPawnTree().nodeList.size() == 1) //no takings after checking - only root node
             consideredPawn.setPawnTree(null);
         else {
             mandatoryPawn = true;
-            if(!takingPossible[0] && !takingPossible[1] && !takingPossible[2] && !takingPossible[3])
-                checkTreeNodes(0, 0); //no more takes in this branch
+            checkTreeNodes(0, 0, 0); //no more takes in this branch -> bind nodes
         }
     }
 
@@ -179,22 +168,12 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         if (position > 10) { //if you'll try to take from the last row - array out of bounds
             if (position % 5 != 0 && playableTile[position - 1 - 4 - rowImpact].getIsTaken() == takenPawn &&
                     playableTile[position - 1 - 9].getIsTaken() == 0) {
-                if (chosenPawn != null) possibleMove.add(position - 9); //checking mandatory taking... or showing possible moves
-                else {
-                    checkTreeNodes(position, position - 9); //checking possible mandatory moves before clicking pawn
-                    takingPossible[0] = true;
-                }
+                checkTreeNodes(position, position - 9, position-4-rowImpact); //checking possible mandatory moves before clicking pawn
             }
-            else takingPossible[0] = false;
             if ((position - 1) % 5 != 0 && playableTile[position - 1 - 5 - rowImpact].getIsTaken() == takenPawn &&
                     playableTile[position - 1 - 11].getIsTaken() == 0) {
-                if (chosenPawn != null) possibleMove.add(position - 11);
-                else {
-                    checkTreeNodes(position, position - 11);
-                    takingPossible[1]= true;
-                }
+                checkTreeNodes(position, position - 11, position-5-rowImpact);
             }
-            else takingPossible[1] = false;
         }
     }
 
@@ -202,145 +181,104 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         if (position <= 40) {
             if ((position - 1) % 5 != 0 && playableTile[position - 1 + 5 - rowImpact].getIsTaken() == takenPawn &&
                     playableTile[position - 1 + 9].getIsTaken() == 0) {
-                if (chosenPawn != null) possibleMove.add(position + 9);
-                else {
-                    checkTreeNodes(position, position + 9);
-                    takingPossible[2] = true;
-                }
+                checkTreeNodes(position, position + 9, position+5-rowImpact);
             }
-            else takingPossible[2] = false;
             if (position % 5 != 0 && playableTile[position - 1 + 6 - rowImpact].getIsTaken() == takenPawn &&
                     playableTile[position - 1 + 11].getIsTaken() == 0) {
-                if (chosenPawn != null) possibleMove.add(position + 11);
-                else {
-                    checkTreeNodes(position, position + 11);
-                    takingPossible[3] = true;
-                }
+                checkTreeNodes(position, position + 11, position+6-rowImpact);
             }
-            else takingPossible[3] = false;
         }
     }
 
-    public void checkTreeNodes(int link, int position) {
-        //DecisionTree thisTree = mandatoryPawn.get(mandatoryPawn.size()-1); //for better readability; last added tree - build for considered pawn
-        DecisionTree thisTree = consideredPawn.getPawnTree();
+    public void checkTreeNodes(int link, int position, int takenPawnPosition) {
+        DecisionTree thisTree = consideredPawn.getPawnTree(); //for better readability; last added tree - build for considered pawn
+        //Log.v("Current", ""+thisTree.getCurrentNode().getPosition());
+        //Log.v("Previous", ""+thisTree.getPreviousNode().getPosition());
         if(position != 0) {
-            if (thisTree.getTakeLength() > 1) {
-                if (position != consideredPawn.previousPosition.get(thisTree.getTakeLength() - 1)) //don't check take-reverse take for eternity
-                    //don't check the same branch twice - CHECK IT BY COMPARING IT WITH BRANCHES!!!
-                    thisTree.nodeList.add(new TreeNode(position, link, thisTree.getTakeLength()));
-            } else thisTree.nodeList.add
-                    (new TreeNode(position, link, thisTree.getTakeLength()));
 
-            TreeNode lastNode = thisTree.nodeList.get(thisTree.nodeList.size() - 1);
-            if (lastNode.getLevel() == thisTree.getTakeLength()) {
-                consideredPawn.previousPosition.add(link);
-                consideredPawn.previousPosition.get(consideredPawn.previousPosition.size() -1 );
-                Log.v("Node", "" + lastNode.getPosition() + " " + lastNode.getLink() + " " + lastNode.getLevel());
-                if (consideredPawn.getIsWhite()) checkMandatoryMove(lastNode.getPosition(), -1);
-                else checkMandatoryMove(lastNode.getPosition(), 1);
+            if(thisTree.getPreviousNode().takenPawnPosition.size() != 0) { //does this node have any already checked branches?
+                boolean branchAlreadyChecked = true;
+                    for (Integer nodeBranch : thisTree.getPreviousNode().takenPawnPosition) {
+                        if (takenPawnPosition != nodeBranch)
+                            branchAlreadyChecked = false; //don't check take-reverse take for eternity
+                        else { //TO DO: don't check the same pawn when taking is longer (node lvl 1 and 4 may be the same pawn)
+                            if(consideredPawn.getIsQueen()) { //there can be more ways to take the same pawn by queen
+                                if(Math.abs(position - thisTree.nodeList.get(thisTree.nodeList.size()-1).getPosition()) >= 4 && //don't check take reverse with queen takes
+                                        Math.abs(position - thisTree.nodeList.get(thisTree.nodeList.size()-1).getPosition()) <= 6) {
+                                    branchAlreadyChecked = false;
+                                    break;
+                                }
+                                else {
+                                    branchAlreadyChecked = true; //reverse take - tile is closer
+                                    break;
+                                }
+                            }
+                            else {
+                                branchAlreadyChecked = true; //don't check the same branch twice
+                                break;
+                            }
+                        }
+                    }
+
+                if(!branchAlreadyChecked) {
+                    thisTree.getCurrentNode().takenPawnPosition.add(takenPawnPosition);
+                    thisTree.setPreviousNode(thisTree.getCurrentNode());
+                    thisTree.nodeList.add(new TreeNode(position, link, thisTree.getTakeLength()));
+                    thisTree.setCurrentNode(thisTree.nodeList.get(thisTree.nodeList.size() - 1)); //set new node as a current one
+                }
+            }
+
+            else {
+                thisTree.getCurrentNode().takenPawnPosition.add(takenPawnPosition);
+                thisTree.setPreviousNode(thisTree.getCurrentNode());
+                thisTree.nodeList.add(new TreeNode(position, link, thisTree.getTakeLength()));
+                thisTree.setCurrentNode(thisTree.nodeList.get(thisTree.nodeList.size() - 1)); //set new node as a current one
+            }
+
+            if (thisTree.getCurrentNode().getLevel() == thisTree.getTakeLength()) {
+                Log.v("Current Node", "" + thisTree.getCurrentNode().getPosition() + " " + thisTree.getCurrentNode().getLink() + " " + thisTree.getCurrentNode().getLevel()+ " " +thisTree.getCurrentNode().takenPawnPosition);
+                //Log.v("Previous Node", "" + thisTree.getPreviousNode().getPosition() + " " + thisTree.getPreviousNode().getLink() + " " + thisTree.getPreviousNode().getLevel()+ " " +thisTree.getPreviousNode().takenPawnPosition);
+                if (consideredPawn.getIsWhite()) checkMandatoryMove(thisTree.getCurrentNode().getPosition(), -1);
+                else checkMandatoryMove(thisTree.getCurrentNode().getPosition(), 1);
             }
         }
         else {
-            TreeNode lastNode = thisTree.nodeList.get(thisTree.nodeList.size() - 1);
-            bindTreeNodes(thisTree, lastNode);
-            if(consideredPawn.previousPosition.size() > 1)
-                consideredPawn.previousPosition.remove(consideredPawn.previousPosition.size()-1); //there can be taking from previous turn
-            thisTree.setTakeLength(thisTree.getTakeLength() - 1); //no more taking; go back one node to check different branch
-            for(Integer prev : consideredPawn.previousPosition) {
-                //Log.v("Previous position: ", ""+prev);
+            //Log.v("End one", ""+thisTree.getCurrentNode().getPosition());
+            if(thisTree.getCurrentNode().takenPawnPosition.size() == 0) bindTreeNodes(thisTree, thisTree.getCurrentNode()); //no more takings in this branch
+            thisTree.setTakeLength(thisTree.getTakeLength() - 1); //go back one node to check different branch
+            for(TreeNode node : thisTree.nodeList) {
+                if(node.getPosition() == thisTree.getCurrentNode().getLink()) {
+                    thisTree.setCurrentNode(node);
+                    break;
+                }
             }
-
+            for(TreeNode node : thisTree.nodeList) {
+                if(node.getPosition() == thisTree.getCurrentNode().getLink()) {
+                    thisTree.setPreviousNode(node);
+                    break;
+                }
+            }
         }
     }
 
     public void bindTreeNodes(DecisionTree thisTree, TreeNode lastNode) {
-
         thisTree.treeBranch.add(new ArrayList<Integer>()); //for recursion
-        thisTree.treeBranch.get(thisTree.treeBranch.size()-1).add(lastNode.getPosition());
-        while(lastNode.getLevel() != 1) {
-            for(TreeNode node : thisTree.nodeList) {
-                if(node.getPosition() == lastNode.getLink() && node.getLevel() == lastNode.getLevel() - 1) {
-                    thisTree.treeBranch.get(thisTree.treeBranch.size()-1).add(0, node.getPosition());
+        thisTree.treeBranch.get(thisTree.treeBranch.size() - 1).add(lastNode.getPosition());
+        while (lastNode.getLevel() != 1) {
+            for (TreeNode node : thisTree.nodeList) {
+                if (node.getPosition() == lastNode.getLink() && node.getLevel() == lastNode.getLevel() - 1) {
+                    thisTree.treeBranch.get(thisTree.treeBranch.size() - 1).add(0, node.getPosition());
                     lastNode = node;
                 }
             }
         }
 
-        /*for(ArrayList<Integer> branch : thisTree.treeBranch) {
-            Log.v("Branch",""+branch);
-        }*/
-        //Log.v("Number of branches", ""+thisTree.treeBranch.size());
-        ArrayList<Integer> branchToRemove = new ArrayList<>();
-        if(thisTree.treeBranch.size() > 1) { //check if there are doubled branches after recursion
-            for(int i=0; i<thisTree.treeBranch.size(); i++) {
-                //Log.v("i-branch", ""+i);
-                for(int j=0; j<thisTree.treeBranch.size(); j++) {
-                    //Log.v("j-branch", ""+j);
-                    if(i!=j && thisTree.treeBranch.get(i).size() == thisTree.treeBranch.get(j).size()) {
-                        //Log.v("Checking...", "");
-                        for(int k=0; k<thisTree.treeBranch.get(j).size(); k++) {
-                            if(thisTree.treeBranch.get(i).get(k) != (thisTree.treeBranch.get(j).get(k))) {
-                                //Log.v("k-node", ""+k);
-                                //Log.v("k in i-branch", ""+thisTree.treeBranch.get(i).get(k));
-                                //Log.v("k in j-branch", ""+thisTree.treeBranch.get(j).get(k));
-                                break; //branches are different
-                            }
-                            else
-                                if(j == thisTree.treeBranch.get(j).size()-1) {
-                                    branchToRemove = thisTree.treeBranch.get(j);
-                                    //Log.v("Branch to remove", ""+j);
-                                }
-                        }
-
-                    }
-                }
-            }
-        }
-
-        if(branchToRemove.size() > 0) {
-            //Log.v("Size", ""+branchToRemove.size());
-            //Log.v("ToRemove", ""+branchToRemove);
-            thisTree.treeBranch.remove(branchToRemove);
-        }
-
-        /*
-        int currentNodeLevel = 1;
-        boolean nodeFound = true; //from current Node level search nodes and bind them; then increase level; until there is no such high level nodes
-        while(nodeFound) {
-            nodeFound = false;
-            ArrayList<Integer> newBranches = new ArrayList<>();
-            for(TreeNode node : thisTree.nodeList) {
-                if(currentNodeLevel == 1) {
-                    if(node.getLevel() == currentNodeLevel && node.getLink() == thisTree.getRoot()) {
-                        ArrayList<Integer> branch = new ArrayList<>();
-                        branch.add(node.getPosition());
-                        thisTree.treeBranch.add(branch);
-                        nodeFound = true;
-                    }
-                }
-                else {
-                    for (ArrayList<Integer> branch : thisTree.treeBranch) {
-                        if (node.getLevel() == currentNodeLevel && node.getLink() == branch.get(currentNodeLevel - 2)) {
-                            newBranches.add(node.getPosition());
-                            nodeFound = true;
-                        }
-                    }
-                    if(newBranches.size() == 1) thisTree.treeBranch.get(thisTree.treeBranch.size()-1).add(newBranches.get(0));
-                    else if(newBranches.size() > 1) thisTree.treeBranch
-                }
-            }
-            currentNodeLevel++;
-        }
-        */
-        Log.v("---------------", "After cleaning");
         for(ArrayList<Integer> branch : thisTree.treeBranch) {
             Log.v("Branch",""+branch);
         }
-        Log.v("Number of branches", ""+thisTree.treeBranch.size());
     }
 
-    public void takeLongestBranch() { //TO DO: if there is greater branch than before - remove the rest
+    public void takeLongestBranch() {
         DecisionTree thisTree = consideredPawn.getPawnTree();
         for(ArrayList<Integer> branch : thisTree.treeBranch) {
             if(branch.size() >= thisTree.getLongestBranch()) {
@@ -355,13 +293,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         thisTree.treeBranch.removeAll(branchesToRemove);
-
-        Log.v("-------------", "Only longest");
-        for(ArrayList<Integer> branch : thisTree.treeBranch) {
-            Log.v("Branch",""+branch);
-        }
-        Log.v("Number of branches", ""+thisTree.treeBranch.size());
-        Log.v("Size of the longest", ""+thisTree.getLongestBranch());
     }
 
     public void chooseFinalPawn(int longestTake) {
@@ -383,8 +314,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
     public void onClick(View view) {
         if(whiteMove) {
-            if (playableTile[view.getId() - 1].getIsTaken() > 0) {
-                //white pawn (or queen) has just been clicked
+            if (playableTile[view.getId() - 1].getIsTaken() > 0) { //white pawn (or queen) has just been clicked
                 possibleMove.clear();
                 for (Pawn wPawn : whitePawn) {
                     markPawn(wPawn, view);
@@ -394,8 +324,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     else markPossibleMove(); //there are no mandatory moves
                 }
             }
-            else
-                makeMove(view); //white pawn was chosen before - this is setting his destination
+            else makeMove(view); //white pawn was chosen before - this is setting his destination
             //TO DO: do not send whole object - just int with destination will do
         }
         else {
@@ -408,7 +337,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     }
                     markPossibleMove();
                 }
-
             }
             else makeMove(view);
         }
@@ -436,15 +364,14 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void makeMove(View view) {
-        Log.v("Make Move", ""+takeNumber);
         boolean validMove = false;
-        if(chosenPawn != null) { //there is a pawn to move
+        if(chosenPawn != null) { //a pawn has been clicked - so it can be moved (or not - if it has no possible moves)
             for (Integer move : possibleMove) {
                 if (view.getId() == move) { //chosen tile is a valid move
-                    playableTile[chosenPawn.getPosition() - 1].setIsTaken(0);
+                    playableTile[chosenPawn.getPosition() - 1].setIsTaken(0); //free previous position
                     playableTileView[chosenPawn.getPosition() - 1].getBackground().setAlpha(255);
                     if(!chosenPawn.getIsQueen()) {
-                        if(whiteMove) playableTile[view.getId() - 1].setIsTaken(1);
+                        if(whiteMove) playableTile[view.getId() - 1].setIsTaken(1); //set pawn on new position
                         else playableTile[view.getId() - 1].setIsTaken(-1);
                     }
                     else {
@@ -452,35 +379,49 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                         else playableTile[view.getId() - 1].setIsTaken(-2);
                     }
 
+                    if(chosenPawn.getPawnTree() != null) { //a pawn has been taken then
+                        TreeNode searchedNode = chosenPawn.getPawnTree().nodeList.get(0); //just to initialize
+                        int[] previousFirstDiagonal; int[] previousSecondDiagonal; //node's link diagonals
+                        int linkIndex = 0; int positionIndex = 0;
 
-                    if(!chosenPawn.getIsQueen() && Math.abs(chosenPawn.getPosition() - view.getId()) > 6) { //pawn took another pawn
-                        int rowImpact = (chosenPawn.getPosition()-1)/5%2; //finding taken pawn differs in odd and even rows
-                        int upTaking = chosenPawn.getPosition() - ( (chosenPawn.getPosition() - view.getId()) / 2 + rowImpact);
-                        int downTaking = chosenPawn.getPosition() + ((view.getId() - chosenPawn.getPosition()) / 2 + 1 - rowImpact);
-                        //upTaking - from higher tile values to smaller; white forward or brown backward
-                        //downTaking - reverse
-
-                        for(PlayableTile tile : playableTile) {
-                            if(chosenPawn.getPosition() > view.getId() && tile.getValue() == upTaking) {
-                                if(tile.getIsTaken() < 0 ) takePawn(true, tile.getValue()); //white forward taking
-                                else if(tile.getIsTaken() > 0) takePawn(false, tile.getValue()); //brown backward taking
+                        for(TreeNode node : chosenPawn.getPawnTree().nodeList) {
+                            if(node.getPosition() == move) {
+                                searchedNode = node; //need to find diagonals of position and link of this node
+                            } //and if there's is a pawn of different color between them - that's the one to take
+                        } //that way it's the same method for queen and regular pawn
+                        checkDiagonals(searchedNode.getLink());
+                        previousFirstDiagonal = chosenPawn.getFirstDiagonal();
+                        previousSecondDiagonal = chosenPawn.getSecondDiagonal();
+                        checkDiagonals(searchedNode.getPosition());
+                        if(previousFirstDiagonal == chosenPawn.getFirstDiagonal()) {
+                            for(int i=0; i < chosenPawn.getFirstDiagonal().length; i++) {
+                                if(chosenPawn.getFirstDiagonal()[i] == searchedNode.getLink()) linkIndex = i;
+                                else if(chosenPawn.getFirstDiagonal()[i] == searchedNode.getPosition()) positionIndex = i;
                             }
-                            else if (chosenPawn.getPosition() < view.getId() && tile.getValue() == downTaking ) {
-                                if(tile.getIsTaken() < 0) takePawn(true, tile.getValue()); //white backward taking
-                                else if(tile.getIsTaken() > 0) takePawn(false, tile.getValue()); //black forward taking
+                            for(int i = 0; i < chosenPawn.getFirstDiagonal().length; i++) {
+                                if( ((i > linkIndex && i < positionIndex) || (i < linkIndex && i > positionIndex))
+                                        && playableTile[chosenPawn.getFirstDiagonal()[i]-1].getIsTaken()!=0) {
+                                    takePawn(chosenPawn.getFirstDiagonal()[i]);
+                                    break; //only one pawn to take for one click
+                                }
+                            }
+                        }
+                        else if(previousSecondDiagonal == chosenPawn.getSecondDiagonal()) {
+                            for(int i=0; i < chosenPawn.getSecondDiagonal().length; i++) {
+                                if(chosenPawn.getSecondDiagonal()[i] == searchedNode.getLink()) linkIndex = i;
+                                else if(chosenPawn.getSecondDiagonal()[i] == searchedNode.getPosition()) positionIndex = i;
+                            }
+                            for(int i = 0; i < chosenPawn.getSecondDiagonal().length; i++) {
+                                if( ((i > linkIndex && i < positionIndex) || (i < linkIndex && i > positionIndex))
+                                        && playableTile[chosenPawn.getSecondDiagonal()[i]-1].getIsTaken()!=0) {
+                                    takePawn(chosenPawn.getSecondDiagonal()[i]);
+                                    break;
+                                }
                             }
                         }
                     }
-                    else if(chosenPawn.getIsQueen()) {
-                        for(PlayableTile tile : playableTile) {
-                            if(tile.getValue() == pawnToTake) {
-                                if(tile.getIsTaken() < 0) takePawn(true, tile.getValue());
-                                else takePawn(false, tile.getValue());
-                            }
-                        }
-                    }
+
                     chosenPawn.setPosition(view.getId());
-                    chosenPawn.previousPosition.add(view.getId());
                     validMove = true;
                     break;
                 }
@@ -488,10 +429,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
             if(validMove) {
                 if(mandatoryPawn) {
-                    pawnToTake = 0;
                     possibleMove.clear();
                     takeNumber++;
-                    Log.v("Valid Move", ""+takeNumber);
                     checkPossibleMoves(chosenPawn); //there might be multiple taking
                     if(possibleMove.size() != 0) {
                         markPawn(chosenPawn, view);
@@ -513,18 +452,18 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             playableTile[chosenPawn.getPosition() - 1].setIsTaken(-2);
             chosenPawn.setIsQueen(true);
         }
-        chosenPawn.previousPosition.clear();
-        chosenPawn.previousPosition.add(chosenPawn.getPosition());
+
         chosenPawn = null;
         whiteMove = !whiteMove;
         mandatoryPawn = false;
         takeNumber = 0;
+        //if(pawnToTake.size() > 0 ) pawnToTake.clear();
         drawPawns();
     }
 
-    public void takePawn(boolean isWhite, int pos) { //isWhite == true means white just took a brown pawn
+    public void takePawn(int pos) { //isWhite = true means white just took a brown pawn
         playableTile[pos - 1].setIsTaken(0);
-        if(isWhite) {
+        if(whiteMove) {
             for (Pawn bPawn : brownPawn) {
                 if (bPawn.getPosition() == pos) {
                     brownPawn.remove(bPawn);
@@ -546,31 +485,29 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         int pos = pawn.getPosition(); //it's too long to write it in every condition n times
         int rowImpact = (pos-1)/5%2; //is row even or odd? 0-9 range; pawns pos: 0-4, 5-9... 45-49; helps with modulo
 
-        if (!pawn.getIsQueen()) {
-            if(!mandatoryPawn)
-                if(whiteMove) checkWhiteMove(pos, rowImpact); //left/right; there are no mandatory takes
+        if(!mandatoryPawn)
+            if(!pawn.getIsQueen()) {
+                if (whiteMove) checkWhiteMove(pos, rowImpact); //left/right; there are no mandatory takes
                 else checkBrownMove(pos, rowImpact);
-            else {
-                if(chosenPawn.getPawnTree() != null) {
-                    for (TreeNode node : chosenPawn.getPawnTree().nodeList) { //pawn is somewhere on its decision tree
-                        if (node.getPosition() == chosenPawn.getPosition()) {  //if not - it's another pawn clicked
-                            for (ArrayList<Integer> branch : chosenPawn.getPawnTree().treeBranch) {
-                                if (takeNumber == 0) {
+            }
+            else checkQueenMoves();
+        else {
+            if(chosenPawn.getPawnTree() != null) {
+                for (TreeNode node : chosenPawn.getPawnTree().nodeList) { //pawn is somewhere on its decision tree
+                    if (node.getPosition() == chosenPawn.getPosition()) {  //if not - it's another pawn clicked
+                        for (ArrayList<Integer> branch : chosenPawn.getPawnTree().treeBranch) {
+                            if (takeNumber == 0) {
+                                possibleMove.add(branch.get(takeNumber));
+                            } else {
+                                if (branch.get(takeNumber - 1) == pawn.getPosition() && branch.size() > takeNumber) {
                                     possibleMove.add(branch.get(takeNumber));
-                                } else {
-                                    if (branch.get(takeNumber - 1) == pawn.getPosition() && branch.size() > takeNumber) {
-                                        possibleMove.add(branch.get(takeNumber));
-                                    }
                                 }
                             }
-                            break;
                         }
+                        break;
                     }
                 }
             }
-        }
-        else {
-            checkDiagonals(pawn);
         }
     }
 
@@ -583,12 +520,10 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
     public void checkBrownMove(int pos, int rowImpact) {
         if ((rowImpact != 1 || (pos - 1) % 5 != 0) && playableTile[pos - 1 + 5 - rowImpact].getIsTaken() == 0)
-            possibleMove.add(pos + 5 - rowImpact); //rightMove; brown perspective - in every brown move
+            possibleMove.add(pos + 5 - rowImpact); //rightMove; brown perspective;
         if ((rowImpact != 0 || pos % 5 != 0) && playableTile[pos - 1 + 6 - rowImpact].getIsTaken() == 0)
             possibleMove.add(pos + 6 - rowImpact); //leftMove
     }
-
-
 
     public void setDiagonals() {
         diagonal[0] = new int[]{1, 6};
@@ -612,244 +547,256 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         diagonal[18] = new int[]{5};
     }
 
-    public void checkDiagonals(Pawn pawn) {
+    public int[] checkDiagonals(int position) {
+        Pawn queen;
+        if(chosenPawn == null) queen = consideredPawn;
+        else queen = chosenPawn;
+        Log.v("Position", ""+position);
         int firstDiagonalIndex = 0;
         int secondDiagonalIndex = 0;
         for (int i = 0; i < diagonal.length; i++) {
             for (int j = 0; j < diagonal[i].length; j++) {
-                if (i < 9 && diagonal[i][j] == pawn.getPosition()) {
-                    pawn.setFirstDiagonal(diagonal[i]);
+                if (i < 9 && diagonal[i][j] == position) {
+                    queen.setFirstDiagonal(diagonal[i]);
                     firstDiagonalIndex = j;
-                } else if (i >= 9 && diagonal[i][j] == pawn.getPosition()) {
-                    pawn.setSecondDiagonal(diagonal[i]);
+                } else if (i >= 9 && diagonal[i][j] == position) {
+                    queen.setSecondDiagonal(diagonal[i]);
                     secondDiagonalIndex = j;
                 }
             }
         }
 
-        Log.v("First Index", ""+firstDiagonalIndex);
-        Log.v("Second Index", ""+secondDiagonalIndex);
-/*
-        if(chosenPawn == null) checkQueenTakes(pawn, firstDiagonalIndex, secondDiagonalIndex);
+
+        /*if(chosenPawn == null) checkQueenTakes(position, firstDiagonalIndex, secondDiagonalIndex);
         else {
-            if(mandatoryPawn.size() == 0) checkQueenMoves(pawn, firstDiagonalIndex, secondDiagonalIndex);
-            else
-                if(pawnToTake != 0) checkQueenFinish(pawn, pawnToTake); //which position is available for queen after taking
-                //pawnToTake == 0 means there is no pawn to take for queen
-        }
-*/
+            if(chosenPawn.getPawnTree() == null) checkQueenMoves(queen, firstDiagonalIndex, secondDiagonalIndex);
+        }*/
+        return new int[]{firstDiagonalIndex, secondDiagonalIndex};
     }
-/*
-    public void checkQueenTakes(Pawn pawn, int firstDiagonalIndex, int secondDiagonalIndex) {
+
+    public void checkQueenTakes(int position) {
+        checkDownRightTaking(position); //all functions' names are from whites perspective
+        checkUpRightTaking(position);
+        checkDownLeftTaking(position);
+        checkUpLeftTaking(position);
+    }
+
+    public void checkDownRightTaking(int position) { //from smaller to higher indexes of second diagonal index
+        int secondDiagonalIndex = checkDiagonals(position)[1];
         if(whiteMove) {
-            while (firstDiagonalIndex > 1) {
-                //Log.v("First", ""+firstDiagonalIndex);
-                if (playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex - 1] - 1].getIsTaken() < 0) {
-                    if (playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex - 2] - 1].getIsTaken() != 0)
-                        break; //two pawns in a row; queen blocked
-                    else {
-                        mandatoryPawn.add(pawn.getPosition());
-                        pawnToTake = pawn.getFirstDiagonal()[firstDiagonalIndex - 1];
+            while (secondDiagonalIndex < consideredPawn.getSecondDiagonal().length - 2) { //at least two tiles to the edge
+                if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex + 1] - 1].getIsTaken() < 0) { //there is possible pawn to take
+                    if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex + 2] - 1].getIsTaken() != 0)
+                        break; //but there's no room to land after it
+                    else { //or is it??
+                        checkDownRightFinish(position, consideredPawn.getSecondDiagonal()[secondDiagonalIndex + 1], secondDiagonalIndex);
                         break;
                     }
                 }
-                else if(playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex - 1] - 1].getIsTaken() == 0) firstDiagonalIndex--;
-                else break; //white pawn; queen blocked
+                else if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex + 1] - 1].getIsTaken() == 0) //empty tile
+                    secondDiagonalIndex++; //but there can be a pawn to take a couple tiles further
+                else break;
             }
-            Log.v("First", ""+firstDiagonalIndex);
-            while (secondDiagonalIndex > 1) {
-                if (playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex - 1] - 1].getIsTaken() < 0) {
-                    if (playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex - 2] - 1].getIsTaken() != 0)
+        }
+        else {
+            while (secondDiagonalIndex < consideredPawn.getSecondDiagonal().length - 2) { //at least two tiles to the edge
+                if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex + 1] - 1].getIsTaken() > 0) { //there is possible pawn to take
+                    if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex + 2] - 1].getIsTaken() != 0)
+                        break; //but there's no room to land after it
+                    else { //or is it??
+                        checkDownRightFinish(position, consideredPawn.getSecondDiagonal()[secondDiagonalIndex + 1], secondDiagonalIndex);
                         break;
-                    else {
-                        mandatoryPawn.add(pawn.getPosition());
-                        pawnToTake = pawn.getSecondDiagonal()[secondDiagonalIndex - 1];
-                        break;
                     }
                 }
-                else if(playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex - 1] - 1].getIsTaken() == 0) secondDiagonalIndex--;
+                else if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex + 1] - 1].getIsTaken() == 0) //empty tile
+                    secondDiagonalIndex++; //but there can be a pawn to take a couple tiles further
                 else break;
             }
-            Log.v("Second", ""+secondDiagonalIndex);
-            while (firstDiagonalIndex < pawn.getFirstDiagonal().length - 2) { //there's a mistake somewhere here if there's taking
-                //Log.v("First", ""+firstDiagonalIndex);
-                if (pawn.getFirstDiagonal()[firstDiagonalIndex] >= pawn.getPosition()) { //restoring index after decrementing it
-                    if (playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex + 1] - 1].getIsTaken() < 0) {
-                        if (playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex + 2] - 1].getIsTaken() != 0)
-                            break;
-                        else {
-                            mandatoryPawn.add(pawn.getPosition());
-                            pawnToTake = pawn.getFirstDiagonal()[firstDiagonalIndex + 1];
-                            break;
-                        }
-                    }
-                    else if(playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex + 1] - 1].getIsTaken() == 0) firstDiagonalIndex++;
-                    else break;
-                }
-                else firstDiagonalIndex++;
-            }
-            Log.v("First", ""+firstDiagonalIndex);
-            while (secondDiagonalIndex < pawn.getSecondDiagonal().length - 2) {
-                if (pawn.getSecondDiagonal()[secondDiagonalIndex] >= pawn.getPosition()) { //restoring index after decrementing it
-                    if (playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex + 1] - 1].getIsTaken() < 0) {
-                        if (playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex + 2] - 1].getIsTaken() != 0)
-                            break;
-                        else {
-                            mandatoryPawn.add(pawn.getPosition());
-                            pawnToTake = pawn.getSecondDiagonal()[secondDiagonalIndex + 1];
-                            break;
-                        }
-                    }
-                    else if(playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex + 1] - 1].getIsTaken() == 0) secondDiagonalIndex++;
-                    else break;
-                }
-                else secondDiagonalIndex++;
-            }
-            Log.v("Second", ""+secondDiagonalIndex);
-        }
-        else {  //TO DO: brown queen taking is old; white is ok
-            while (firstDiagonalIndex > 1) {
-                if (playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex - 1] - 1].getIsTaken() > 0) {
-                    if (playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex - 1] - 2].getIsTaken() != 0)
-                        break; //two pawns in a row; queen blocked
-                    else {
-                        mandatoryPawn.add(pawn.getFirstDiagonal()[firstDiagonalIndex]);
-                        pawnToTake = pawn.getFirstDiagonal()[firstDiagonalIndex - 1];
-                    }
-                } else firstDiagonalIndex--;
-
-            }
-            while (secondDiagonalIndex > 1) {
-                if (playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex - 1] - 1].getIsTaken() > 0) {
-                    if (playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex - 1] - 2].getIsTaken() != 0)
-                        break;
-                    else {
-                        mandatoryPawn.add(pawn.getSecondDiagonal()[secondDiagonalIndex]);
-                        pawnToTake = pawn.getSecondDiagonal()[secondDiagonalIndex - 1];
-                    }
-                }
-                secondDiagonalIndex--;
-            }
-
-            while (firstDiagonalIndex < pawn.getFirstDiagonal().length - 2) {
-                if (pawn.getFirstDiagonal()[firstDiagonalIndex] >= pawn.getPosition()) { //restoring index after decrementing it
-                    if (playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex + 1] - 1].getIsTaken() > 0) {
-                        if (playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex + 2] - 1].getIsTaken() != 0)
-                            break;
-                        else {
-                            mandatoryPawn.add(pawn.getFirstDiagonal()[firstDiagonalIndex]);
-                            pawnToTake = pawn.getFirstDiagonal()[firstDiagonalIndex + 1];
-                        }
-                    }
-                }
-                firstDiagonalIndex++;
-            }
-
-            while (secondDiagonalIndex < pawn.getSecondDiagonal().length - 2) {
-                if (pawn.getSecondDiagonal()[secondDiagonalIndex] >= pawn.getPosition()) { //restoring index after decrementing it
-                    if (playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex + 1] - 1].getIsTaken() > 0) {
-                        if (playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex + 2] - 1].getIsTaken() != 0)
-                            break;
-                        else {
-                            mandatoryPawn.add(pawn.getSecondDiagonal()[secondDiagonalIndex]);
-                            pawnToTake = pawn.getSecondDiagonal()[secondDiagonalIndex + 1];
-                        }
-                    }
-                }
-                secondDiagonalIndex++;
-            }
-        }
-
-        Log.v("Pawn to take:", ""+pawnToTake);
-        for(int mPawn : mandatoryPawn) Log.v("Mandatory pawn", ""+mPawn);
-    }
-
-    public void checkQueenFinish(Pawn pawn, int pawnToTake) {
-        Log.v("Queen finishes", "Yeeeeeah!");
-        int pawnToTakeFirstIndex = 0;
-        int pawnToTakeSecondIndex = 0;
-        for(int i=0; i<pawn.getFirstDiagonal().length; i++) {
-            if(pawnToTake == pawn.getFirstDiagonal()[i]) pawnToTakeFirstIndex = i;
-        }
-        for(int i=0; i<pawn.getSecondDiagonal().length; i++) {
-            if(pawnToTake == pawn.getSecondDiagonal()[i]) pawnToTakeSecondIndex = i;
-        }
-
-        Log.v("Taken pawn 1 index", ""+pawnToTakeFirstIndex);
-        Log.v("Taken pawn 2 index", ""+pawnToTakeSecondIndex);
-
-        if(pawn.getPosition() > pawnToTake) {
-            while(pawnToTakeFirstIndex > 0) {
-                if(playableTile[pawn.getFirstDiagonal()[pawnToTakeFirstIndex-1] - 1].getIsTaken() == 0) //tile behind a pawn is free and can be taken by queen
-                    possibleMove.add(pawn.getFirstDiagonal()[pawnToTakeFirstIndex - 1]);
-                else break;
-                pawnToTakeFirstIndex--;
-            }
-            while(pawnToTakeSecondIndex > 0) {
-                if(playableTile[pawn.getSecondDiagonal()[pawnToTakeSecondIndex-1] - 1].getIsTaken() == 0) //tile behind a pawn is free and can be taken by queen
-                    possibleMove.add(pawn.getSecondDiagonal()[pawnToTakeSecondIndex - 1]);
-                else break;
-                pawnToTakeSecondIndex--;
-            }
-        }
-
-        for(int i=0; i<pawn.getFirstDiagonal().length; i++) {
-            if(pawnToTake == pawn.getFirstDiagonal()[i]) pawnToTakeFirstIndex = i;
-        }
-        for(int i=0; i<pawn.getSecondDiagonal().length; i++) {
-            if(pawnToTake == pawn.getSecondDiagonal()[i]) pawnToTakeSecondIndex = i;
-        }
-
-        if(pawn.getPosition() < pawnToTake) {
-            while(pawnToTakeFirstIndex < pawn.getFirstDiagonal().length - 1) {
-                if(playableTile[pawn.getFirstDiagonal()[pawnToTakeFirstIndex+1] - 1].getIsTaken() == 0) //tile behind a pawn is free and can be taken by queen
-                    possibleMove.add(pawn.getFirstDiagonal()[pawnToTakeFirstIndex + 1]);
-                else break;
-                pawnToTakeFirstIndex++;
-            }
-            while(pawnToTakeSecondIndex < pawn.getSecondDiagonal().length - 1) {
-                if(playableTile[pawn.getSecondDiagonal()[pawnToTakeSecondIndex+1] - 1].getIsTaken() == 0) //tile behind a pawn is free and can be taken by queen
-                    possibleMove.add(pawn.getSecondDiagonal()[pawnToTakeSecondIndex + 1]);
-                else break;
-                pawnToTakeSecondIndex++;
-            }
-        }
-        for(int poss : possibleMove) {
-            Log.v("Move", ""+poss);
         }
     }
 
-    public void checkQueenMoves(Pawn pawn, int firstDiagonalIndex, int secondDiagonalIndex) {
-
-        while(firstDiagonalIndex != 0) {
-            if(playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex-1] - 1].getIsTaken() == 0)
-                possibleMove.add(pawn.getFirstDiagonal()[firstDiagonalIndex-1]);
-            else break;
-            firstDiagonalIndex--;
-
-        }
-        while(secondDiagonalIndex != 0) {
-            if(playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex-1] - 1].getIsTaken() == 0)
-                possibleMove.add(pawn.getSecondDiagonal()[secondDiagonalIndex-1]);
-            else break;
-            secondDiagonalIndex--;
-        }
-        while(firstDiagonalIndex != pawn.getFirstDiagonal().length - 1) {
-            if(pawn.getFirstDiagonal()[firstDiagonalIndex] >= pawn.getPosition()) { //restoring index after decrementing it
-                if(playableTile[pawn.getFirstDiagonal()[firstDiagonalIndex+1] - 1].getIsTaken() == 0)
-                    possibleMove.add(pawn.getFirstDiagonal()[firstDiagonalIndex+1]);
-                else break;
-            }
-            firstDiagonalIndex++;
-        }
-        while(secondDiagonalIndex != pawn.getSecondDiagonal().length - 1) {
-            if(pawn.getSecondDiagonal()[secondDiagonalIndex] >= pawn.getPosition()) { //restoring index after decrementing it
-                if(playableTile[pawn.getSecondDiagonal()[secondDiagonalIndex+1] - 1].getIsTaken() == 0)
-                    possibleMove.add(pawn.getSecondDiagonal()[secondDiagonalIndex+1]);
+    public void checkDownRightFinish(int currentPosition, int takenPawnPosition, int secondDiagonalIndex) {
+        while (secondDiagonalIndex < consideredPawn.getSecondDiagonal().length) {
+            if(consideredPawn.getSecondDiagonal()[secondDiagonalIndex] > takenPawnPosition) { //you must land after taken pawn to make proper move
+                if(playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex] - 1].getIsTaken() == 0) {
+                    checkTreeNodes(currentPosition, consideredPawn.getSecondDiagonal()[secondDiagonalIndex], takenPawnPosition);
+                }
                 else break;
             }
             secondDiagonalIndex++;
         }
-    }*/
+    }
+
+    public void checkDownLeftTaking(int position) { //from smaller to higher indexes of first diagonal index
+        int firstDiagonalIndex = checkDiagonals(position)[0];
+        if(whiteMove) {
+            while (firstDiagonalIndex < consideredPawn.getFirstDiagonal().length - 2) { //at least two tiles to the edge
+                if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex + 1] - 1].getIsTaken() < 0) { //there is possible pawn to take
+                    if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex + 2] - 1].getIsTaken() != 0)
+                        break; //but there's no room to land after it
+                    else { //or is it??
+                        checkDownLeftFinish(position, consideredPawn.getFirstDiagonal()[firstDiagonalIndex + 1], firstDiagonalIndex);
+                        break;
+                    }
+                }
+                else if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex + 1] - 1].getIsTaken() == 0) //empty tile
+                    firstDiagonalIndex++; //but there can be a pawn to take a couple tiles further
+                else break;
+            }
+        }
+        else {
+            while (firstDiagonalIndex < consideredPawn.getFirstDiagonal().length - 2) { //at least two tiles to the edge
+                if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex + 1] - 1].getIsTaken() > 0) { //there is possible pawn to take
+                    if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex + 2] - 1].getIsTaken() != 0)
+                        break; //but there's no room to land after it
+                    else { //or is it??
+                        checkDownLeftFinish(position, consideredPawn.getFirstDiagonal()[firstDiagonalIndex + 1], firstDiagonalIndex);
+                        break;
+                    }
+                }
+                else if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex + 1] - 1].getIsTaken() == 0) //empty tile
+                    firstDiagonalIndex++; //but there can be a pawn to take a couple tiles further
+                else break;
+            }
+        }
+    }
+
+    public void checkDownLeftFinish(int currentPosition, int takenPawnPosition, int firstDiagonalIndex) {
+        while (firstDiagonalIndex < consideredPawn.getFirstDiagonal().length) {
+            if(consideredPawn.getFirstDiagonal()[firstDiagonalIndex] > takenPawnPosition) { //you must land after taken pawn to make proper move
+                if(playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex] - 1].getIsTaken() == 0) {
+                    checkTreeNodes(currentPosition, consideredPawn.getFirstDiagonal()[firstDiagonalIndex], takenPawnPosition);
+                } //it is a valid move; there might be another take possible
+                else break;
+            }
+            firstDiagonalIndex++;
+        }
+    }
+
+    public void checkUpRightTaking(int position) { //from higher to smaller indexes of first diagonal index
+        int firstDiagonalIndex = checkDiagonals(position)[0];
+        if(whiteMove) {
+            while (firstDiagonalIndex > 1) { //at least two tiles to the edge
+                if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex - 1] - 1].getIsTaken() < 0) { //there is possible pawn to take
+                    if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex - 2] - 1].getIsTaken() != 0)
+                        break; //but there's no room to land after it
+                    else { //or is it??
+                        checkUpRightFinish(position, consideredPawn.getFirstDiagonal()[firstDiagonalIndex - 1], firstDiagonalIndex);
+                        break;
+                    }
+                }
+                else if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex - 1] - 1].getIsTaken() == 0) //empty tile
+                    firstDiagonalIndex--; //but there can be a pawn to take a couple tiles further
+                else break;
+            }
+        }
+        else {
+            while (firstDiagonalIndex > 1) { //at least two tiles to the edge
+                if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex - 1] - 1].getIsTaken() > 0) { //there is possible pawn to take
+                    if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex - 2] - 1].getIsTaken() != 0)
+                        break; //but there's no room to land after it
+                    else { //or is it??
+                        checkUpRightFinish(position, consideredPawn.getFirstDiagonal()[firstDiagonalIndex - 1], firstDiagonalIndex);
+                        break;
+                    }
+                }
+                else if (playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex - 1] - 1].getIsTaken() == 0) //empty tile
+                    firstDiagonalIndex--; //but there can be a pawn to take a couple tiles further
+                else break;
+            }
+        }
+    }
+
+    public void checkUpRightFinish(int currentPosition, int takenPawnPosition, int firstDiagonalIndex) {
+        while (firstDiagonalIndex >= 0) {
+            if(consideredPawn.getFirstDiagonal()[firstDiagonalIndex] < takenPawnPosition) { //you must land after taken pawn to make proper move
+                if(playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex] - 1].getIsTaken() == 0) {
+                    checkTreeNodes(currentPosition, consideredPawn.getFirstDiagonal()[firstDiagonalIndex], takenPawnPosition);
+                } //it is a valid move; there might be another take possible
+                else break;
+            }
+            firstDiagonalIndex--;
+        }
+    }
+
+    public void checkUpLeftTaking(int position) { //from higher to smaller indexes of second diagonal index
+        int secondDiagonalIndex = checkDiagonals(position)[1];
+        if(whiteMove) {
+            while (secondDiagonalIndex > 1) { //at least two tiles to the edge
+                if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex - 1] - 1].getIsTaken() < 0) { //there is possible pawn to take
+                    if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex - 2] - 1].getIsTaken() != 0)
+                        break; //but there's no room to land after it
+                    else { //or is it??
+                        checkUpLeftFinish(position, consideredPawn.getSecondDiagonal()[secondDiagonalIndex - 1], secondDiagonalIndex);
+                        break;
+                    }
+                }
+                else if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex - 1] - 1].getIsTaken() == 0) //empty tile
+                    secondDiagonalIndex--; //but there can be a pawn to take a couple tiles further
+                else break;
+            }
+        }
+        else {
+            while (secondDiagonalIndex > 1) { //at least two tiles to the edge
+                if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex - 1] - 1].getIsTaken() > 0) { //there is possible pawn to take
+                    if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex - 2] - 1].getIsTaken() != 0)
+                        break; //but there's no room to land after it
+                    else { //or is it??
+                        checkUpLeftFinish(position, consideredPawn.getSecondDiagonal()[secondDiagonalIndex - 1], secondDiagonalIndex);
+                        break;
+                    }
+                }
+                else if (playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex - 1] - 1].getIsTaken() == 0) //empty tile
+                    secondDiagonalIndex--; //but there can be a pawn to take a couple tiles further
+                else break;
+            }
+        }
+    }
+
+    public void checkUpLeftFinish(int currentPosition, int takenPawnPosition, int secondDiagonalIndex) {
+        while (secondDiagonalIndex >= 0) {
+            if(consideredPawn.getSecondDiagonal()[secondDiagonalIndex] < takenPawnPosition) { //you must land after taken pawn to make proper move
+                if(playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex] - 1].getIsTaken() == 0) {
+                    checkTreeNodes(currentPosition, consideredPawn.getSecondDiagonal()[secondDiagonalIndex], takenPawnPosition);
+                }
+                else break;
+            }
+            secondDiagonalIndex--;
+        }
+    }
+
+    public void checkQueenMoves() { //TO DO: considered pawn will do (you mean chosen?)
+        int[] indexes = checkDiagonals(chosenPawn.getPosition());
+        while(indexes[0] != 0) {
+            if(playableTile[chosenPawn.getFirstDiagonal()[indexes[0]-1] - 1].getIsTaken() == 0)
+                possibleMove.add(chosenPawn.getFirstDiagonal()[indexes[0]-1]);
+            else break;
+            indexes[0]--;
+
+        }
+        while(indexes[1] != 0) {
+            if(playableTile[chosenPawn.getSecondDiagonal()[indexes[1]-1] - 1].getIsTaken() == 0)
+                possibleMove.add(chosenPawn.getSecondDiagonal()[indexes[1]-1]);
+            else break;
+            indexes[1]--;
+        }
+        while(indexes[0] != chosenPawn.getFirstDiagonal().length - 1) {
+            if(chosenPawn.getFirstDiagonal()[indexes[0]] >= chosenPawn.getPosition()) { //restoring index after decrementing it
+                if(playableTile[chosenPawn.getFirstDiagonal()[indexes[0]+1] - 1].getIsTaken() == 0)
+                    possibleMove.add(chosenPawn.getFirstDiagonal()[indexes[0]+1]);
+                else break;
+            }
+            indexes[0]++;
+        }
+        while(indexes[1] != chosenPawn.getSecondDiagonal().length - 1) {
+            if(chosenPawn.getSecondDiagonal()[indexes[1]] >= chosenPawn.getPosition()) { //restoring index after decrementing it
+                if(playableTile[chosenPawn.getSecondDiagonal()[indexes[1]+1] - 1].getIsTaken() == 0)
+                    possibleMove.add(chosenPawn.getSecondDiagonal()[indexes[1]+1]);
+                else break;
+            }
+            indexes[1]++;
+        }
+    }
+
 }
 
