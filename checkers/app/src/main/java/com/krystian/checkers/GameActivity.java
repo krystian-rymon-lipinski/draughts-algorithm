@@ -43,7 +43,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     Pawn chosenPawn; //to set new position and check possible moves for a specific (marked) pawn
     Pawn consideredPawn; //to check mandatory moves for every pawn
     boolean mandatoryPawn = false; //is there a pawn (or more) that has to take another one(s)?
-    //boolean[] takingPossible = new boolean[]{false, false, false, false}; //to bind nodes only when there's no taking in any direction
     int takeNumber = 0; //to show possible moves during multiple taking (if there are more branches from specific node)
 
 
@@ -52,7 +51,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_game);
 
         board = (GridLayout) findViewById(R.id.board);
-        setDiagonals(); //for queen moves
+        setDiagonals(); //for queen moves and pawn/queen takings
         measureBoard(); //and draw it with pawns after that
     }
 
@@ -200,11 +199,11 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 boolean branchAlreadyChecked = true;
                     for (Integer nodeBranch : thisTree.getPreviousNode().takenPawnPosition) {
                         if (takenPawnPosition != nodeBranch)
-                            branchAlreadyChecked = false; //don't check take-reverse take for eternity
-                        else { //TO DO: don't check the same pawn when taking is longer (node lvl 1 and 4 may be the same pawn)
+                            branchAlreadyChecked = false; //pawn hasn't been  included in any branch yet
+                        else { //TO DO: don't check the same pawn when taking is longer (node lvl 1 and 4 may be the same pawn for queen)
+                            //TO DO: don't check square taking (lvl 1 and 5 is the same pawn - taking for eternity)
                             if(consideredPawn.getIsQueen()) { //there can be more ways to take the same pawn by queen
-                                if(Math.abs(position - thisTree.nodeList.get(thisTree.nodeList.size()-1).getPosition()) >= 4 && //don't check take reverse with queen takes
-                                        Math.abs(position - thisTree.nodeList.get(thisTree.nodeList.size()-1).getPosition()) <= 6) {
+                                if(thisTree.getCurrentNode().getLevel() == 0) {
                                     branchAlreadyChecked = false;
                                     break;
                                 }
@@ -214,7 +213,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                                 }
                             }
                             else {
-                                branchAlreadyChecked = true; //don't check the same branch twice
+                                branchAlreadyChecked = true; //normal pawn can take a pawn only in one way
                                 break;
                             }
                         }
@@ -249,7 +248,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             for(TreeNode node : thisTree.nodeList) {
                 if(node.getPosition() == thisTree.getCurrentNode().getLink()) {
                     thisTree.setCurrentNode(node);
-                    break;
+                    if(consideredPawn.getIsQueen()) checkDiagonals(thisTree.getCurrentNode().getPosition());
+                    break; //diagonals must be checked again because node has changed; indexes aren't important here - but arrays are
                 }
             }
             for(TreeNode node : thisTree.nodeList) {
@@ -566,11 +566,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
 
-
-        /*if(chosenPawn == null) checkQueenTakes(position, firstDiagonalIndex, secondDiagonalIndex);
-        else {
-            if(chosenPawn.getPawnTree() == null) checkQueenMoves(queen, firstDiagonalIndex, secondDiagonalIndex);
-        }*/
         return new int[]{firstDiagonalIndex, secondDiagonalIndex};
     }
 
@@ -616,14 +611,21 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void checkDownRightFinish(int currentPosition, int takenPawnPosition, int secondDiagonalIndex) {
+        ArrayList<Integer> newPosition = new ArrayList<>();
         while (secondDiagonalIndex < consideredPawn.getSecondDiagonal().length) {
-            if(consideredPawn.getSecondDiagonal()[secondDiagonalIndex] > takenPawnPosition) { //you must land after taken pawn to make proper move
+            if(consideredPawn.getSecondDiagonal()[secondDiagonalIndex] > takenPawnPosition) { //you must land behind taken pawn to make proper move
                 if(playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex] - 1].getIsTaken() == 0) {
-                    checkTreeNodes(currentPosition, consideredPawn.getSecondDiagonal()[secondDiagonalIndex], takenPawnPosition);
+                    //checkTreeNodes(currentPosition, consideredPawn.getSecondDiagonal()[secondDiagonalIndex], takenPawnPosition);
+                    newPosition.add(consideredPawn.getSecondDiagonal()[secondDiagonalIndex]);
                 }
                 else break;
             }
             secondDiagonalIndex++;
+        }
+        //That's new! And maybe it is even working!
+        for(int i=0; i<newPosition.size(); i++) {
+            checkDiagonals(newPosition.get(i)); //to set diagonals for every node after taken pawn
+            checkTreeNodes(currentPosition, newPosition.get(i), takenPawnPosition);
         }
     }
 
@@ -662,14 +664,20 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void checkDownLeftFinish(int currentPosition, int takenPawnPosition, int firstDiagonalIndex) {
+        ArrayList<Integer> newPosition = new ArrayList<>();
         while (firstDiagonalIndex < consideredPawn.getFirstDiagonal().length) {
             if(consideredPawn.getFirstDiagonal()[firstDiagonalIndex] > takenPawnPosition) { //you must land after taken pawn to make proper move
                 if(playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex] - 1].getIsTaken() == 0) {
-                    checkTreeNodes(currentPosition, consideredPawn.getFirstDiagonal()[firstDiagonalIndex], takenPawnPosition);
+                    //checkTreeNodes(currentPosition, consideredPawn.getFirstDiagonal()[firstDiagonalIndex], takenPawnPosition);
+                    newPosition.add(consideredPawn.getFirstDiagonal()[firstDiagonalIndex]);
                 } //it is a valid move; there might be another take possible
                 else break;
             }
             firstDiagonalIndex++;
+        }
+        for(int i=0; i<newPosition.size(); i++) {
+            checkDiagonals(newPosition.get(i));
+            checkTreeNodes(currentPosition, newPosition.get(i), takenPawnPosition);
         }
     }
 
@@ -708,14 +716,21 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void checkUpRightFinish(int currentPosition, int takenPawnPosition, int firstDiagonalIndex) {
+        ArrayList<Integer> newPosition = new ArrayList<>();
+
         while (firstDiagonalIndex >= 0) {
             if(consideredPawn.getFirstDiagonal()[firstDiagonalIndex] < takenPawnPosition) { //you must land after taken pawn to make proper move
                 if(playableTile[consideredPawn.getFirstDiagonal()[firstDiagonalIndex] - 1].getIsTaken() == 0) {
-                    checkTreeNodes(currentPosition, consideredPawn.getFirstDiagonal()[firstDiagonalIndex], takenPawnPosition);
+                    //checkTreeNodes(currentPosition, consideredPawn.getFirstDiagonal()[firstDiagonalIndex], takenPawnPosition);
+                    newPosition.add(consideredPawn.getFirstDiagonal()[firstDiagonalIndex]);
                 } //it is a valid move; there might be another take possible
                 else break;
             }
             firstDiagonalIndex--;
+        }
+        for(int i=0; i<newPosition.size(); i++) {
+            checkDiagonals(newPosition.get(i));
+            checkTreeNodes(currentPosition, newPosition.get(i), takenPawnPosition);
         }
     }
 
@@ -754,14 +769,20 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void checkUpLeftFinish(int currentPosition, int takenPawnPosition, int secondDiagonalIndex) {
+        ArrayList<Integer> newPosition = new ArrayList<>();
         while (secondDiagonalIndex >= 0) {
             if(consideredPawn.getSecondDiagonal()[secondDiagonalIndex] < takenPawnPosition) { //you must land after taken pawn to make proper move
                 if(playableTile[consideredPawn.getSecondDiagonal()[secondDiagonalIndex] - 1].getIsTaken() == 0) {
-                    checkTreeNodes(currentPosition, consideredPawn.getSecondDiagonal()[secondDiagonalIndex], takenPawnPosition);
+                    //checkTreeNodes(currentPosition, consideredPawn.getSecondDiagonal()[secondDiagonalIndex], takenPawnPosition);
+                    newPosition.add(consideredPawn.getSecondDiagonal()[secondDiagonalIndex]);
                 }
                 else break;
             }
             secondDiagonalIndex--;
+        }
+        for(int i=0; i<newPosition.size(); i++) {
+            checkDiagonals(newPosition.get(i));
+            checkTreeNodes(currentPosition, newPosition.get(i), takenPawnPosition);
         }
     }
 
