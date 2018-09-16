@@ -24,6 +24,10 @@ import android.view.View;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import java.util.ArrayList;
+import java.util.Random;
+
+import algorithmPackage.GameNode;
+import algorithmPackage.GameTree;
 
 
 public class GameActivity extends AppCompatActivity implements View.OnClickListener {
@@ -40,11 +44,15 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     ArrayList<Pawn> brownPawn = new ArrayList<>();
     ArrayList<Integer> possibleMove = new ArrayList<>();
     boolean whiteMove = true;
+    //boolean playerMove = whiteMove;
     Pawn chosenPawn; //to set new position and check possible moves for a specific (marked) pawn
     Pawn consideredPawn; //to check mandatory moves for every pawn
+    //ArrayList<DecisionTree> mandatoryPawn = new ArrayList<>();
     boolean mandatoryPawn = false; //is there a pawn (or more) that has to take another one(s)?
     int takeNumber = 0; //to show possible moves during multiple taking (if there are more branches from specific node)
 
+
+    public GameActivity() {};
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -141,7 +149,40 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 }
             }
             chooseFinalPawn(longestTake); //the one(s) with the longest taking possible
+            checkForBestMove();
         }
+    }
+
+    public void checkForBestMove() {
+        ArrayList<GameNode> pawnToMove = new ArrayList<>();
+        Random rand = new Random();
+        for (Pawn bPawn : brownPawn) {
+            chosenPawn = bPawn; //to add gameNodes for queen
+            if (mandatoryPawn) {
+                if (bPawn.getPawnTree() != null) {
+                    for(ArrayList<Integer> branch : bPawn.getPawnTree().treeBranch) {
+                        pawnToMove.add(new GameNode(bPawn, branch.get(takeNumber)));
+                    }
+                }
+            }
+            else {
+                int movesNumber = possibleMove.size();
+                checkPossibleMoves(bPawn);
+                if(possibleMove.size() != movesNumber) { //there are moves for this particular pawn
+                    for(int i=1; i<=possibleMove.size() - movesNumber; i++) {
+                        pawnToMove.add(
+                                new GameNode(bPawn, possibleMove.get(possibleMove.size() - i)));
+                    }
+                }
+                possibleMove.clear(); //possible move checked, but only one can chosen
+            }
+            Log.v("How many moves", ""+pawnToMove.size());
+        }
+        GameNode chosenNode = pawnToMove.get(rand.nextInt(pawnToMove.size()));
+        Log.v("Chosen node", ""+chosenNode.getPawn().getPosition()+" "+chosenNode.getMove());
+        chosenPawn = chosenNode.getPawn();
+        possibleMove.add(chosenNode.getMove());
+        makeMove(chosenNode.getMove());
     }
 
     public void checkMandatoryMove(int position, int takenPawn) { //takenPawn = -1/-2 means brown pawn/queen can be taken
@@ -235,7 +276,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             }
 
             if (thisTree.getCurrentNode().getLevel() == thisTree.getTakeLength()) {
-                Log.v("Current Node", "" + thisTree.getCurrentNode().getPosition() + " " + thisTree.getCurrentNode().getLink() + " " + thisTree.getCurrentNode().getLevel()+ " " +thisTree.getCurrentNode().takenPawnPosition);
+                //Log.v("Current Node", "" + thisTree.getCurrentNode().getPosition() + " " + thisTree.getCurrentNode().getLink() + " " + thisTree.getCurrentNode().getLevel()+ " " +thisTree.getCurrentNode().takenPawnPosition);
                 //Log.v("Previous Node", "" + thisTree.getPreviousNode().getPosition() + " " + thisTree.getPreviousNode().getLink() + " " + thisTree.getPreviousNode().getLevel()+ " " +thisTree.getPreviousNode().takenPawnPosition);
                 if (consideredPawn.getIsWhite()) checkMandatoryMove(thisTree.getCurrentNode().getPosition(), -1);
                 else checkMandatoryMove(thisTree.getCurrentNode().getPosition(), 1);
@@ -274,7 +315,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         for(ArrayList<Integer> branch : thisTree.treeBranch) {
-            Log.v("Branch",""+branch);
+            //Log.v("Branch",""+branch);
         }
     }
 
@@ -317,34 +358,35 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             if (playableTile[view.getId() - 1].getIsTaken() > 0) { //white pawn (or queen) has just been clicked
                 possibleMove.clear();
                 for (Pawn wPawn : whitePawn) {
-                    markPawn(wPawn, view);
+                    markPawn(wPawn, view.getId());
                     if(mandatoryPawn) {
                         if(wPawn.getPawnTree() != null) markPossibleMove();
                     }
                     else markPossibleMove(); //there are no mandatory moves
                 }
             }
-            else makeMove(view); //white pawn was chosen before - this is setting his destination
+            else makeMove(view.getId()); //white pawn was chosen before - this is setting his destination
             //TO DO: do not send whole object - just int with destination will do
         }
         else {
             if (playableTile[view.getId() - 1].getIsTaken() < 0) {
                 possibleMove.clear();
                 for (Pawn bPawn : brownPawn) {
-                    markPawn(bPawn, view);
+                    markPawn(bPawn, view.getId());
                     if(mandatoryPawn) {
                         if(bPawn.getPawnTree() != null) markPossibleMove();
                     }
                     markPossibleMove();
                 }
             }
-            else makeMove(view);
+            else makeMove(view.getId());
         }
     }
 
-    public void markPawn(Pawn wPawn, View view) {
+
+    public void markPawn(Pawn wPawn, int position) {
         playableTileView[wPawn.getPosition() - 1].getBackground().setAlpha(255);
-        if (wPawn.getPosition() == view.getId()) {
+        if (wPawn.getPosition() == position) {
             if(whiteMove) playableTileView[wPawn.getPosition() -1].setBackgroundResource(R.drawable.white_pawn); //in multiple takings
             else playableTileView[wPawn.getPosition() -1].setBackgroundResource(R.drawable.brown_pawn); //to show pawn instead of green cell (possible move)
             playableTileView[wPawn.getPosition() - 1].getBackground().setAlpha(70);
@@ -363,20 +405,20 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    public void makeMove(View view) {
+    public void makeMove(int destination) {
         boolean validMove = false;
         if(chosenPawn != null) { //a pawn has been clicked - so it can be moved (or not - if it has no possible moves)
             for (Integer move : possibleMove) {
-                if (view.getId() == move) { //chosen tile is a valid move
+                if (destination == move) { //chosen tile is a valid move
                     playableTile[chosenPawn.getPosition() - 1].setIsTaken(0); //free previous position
-                    playableTileView[chosenPawn.getPosition() - 1].getBackground().setAlpha(255);
+                    Log.v("Pawn", ""+chosenPawn.getPosition());
                     if(!chosenPawn.getIsQueen()) {
-                        if(whiteMove) playableTile[view.getId() - 1].setIsTaken(1); //set pawn on new position
-                        else playableTile[view.getId() - 1].setIsTaken(-1);
+                        if(whiteMove) playableTile[destination - 1].setIsTaken(1); //set pawn on new position
+                        else playableTile[destination - 1].setIsTaken(-1);
                     }
                     else {
-                        if(whiteMove) playableTile[view.getId() - 1].setIsTaken(2);
-                        else playableTile[view.getId() - 1].setIsTaken(-2);
+                        if(whiteMove) playableTile[destination - 1].setIsTaken(2);
+                        else playableTile[destination - 1].setIsTaken(-2);
                     }
 
                     if(chosenPawn.getPawnTree() != null) { //a pawn has been taken then
@@ -421,7 +463,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     }
 
-                    chosenPawn.setPosition(view.getId());
+                    chosenPawn.setPosition(destination);
                     validMove = true;
                     break;
                 }
@@ -433,8 +475,11 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     takeNumber++;
                     checkPossibleMoves(chosenPawn); //there might be multiple taking
                     if(possibleMove.size() != 0) {
-                        markPawn(chosenPawn, view);
-                        markPossibleMove();
+                        if(whiteMove) {
+                            markPawn(chosenPawn, destination);
+                            markPossibleMove();
+                        }
+                        else checkForBestMove(); //check for next pawn to take (or choose one if there are moree of them)
                     }
                     else endMove();
                 }
@@ -457,11 +502,10 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         whiteMove = !whiteMove;
         mandatoryPawn = false;
         takeNumber = 0;
-        //if(pawnToTake.size() > 0 ) pawnToTake.clear();
         drawPawns();
     }
 
-    public void takePawn(int pos) { //isWhite = true means white just took a brown pawn
+    public void takePawn(int pos) {
         playableTile[pos - 1].setIsTaken(0);
         if(whiteMove) {
             for (Pawn bPawn : brownPawn) {
@@ -551,7 +595,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         Pawn queen;
         if(chosenPawn == null) queen = consideredPawn;
         else queen = chosenPawn;
-        Log.v("Position", ""+position);
+        //Log.v("Position", ""+position);
         int firstDiagonalIndex = 0;
         int secondDiagonalIndex = 0;
         for (int i = 0; i < diagonal.length; i++) {
