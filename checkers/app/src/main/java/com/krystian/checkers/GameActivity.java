@@ -23,11 +23,15 @@ import android.util.Log;
 import android.view.View;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
+
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Random;
 
 import algorithmPackage.GameNode;
 import algorithmPackage.GameTree;
+
+import static android.R.color.white;
 
 
 public class GameActivity extends AppCompatActivity implements View.OnClickListener {
@@ -50,6 +54,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     //ArrayList<DecisionTree> mandatoryPawn = new ArrayList<>();
     boolean mandatoryPawn = false; //is there a pawn (or more) that has to take another one(s)?
     int takeNumber = 0; //to show possible moves during multiple taking (if there are more branches from specific node)
+    GameTree gameTree = null;
 
 
     public GameActivity() {};
@@ -116,7 +121,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         }
 
         int longestTake = 0;
-        if(whiteMove) {
+        if(whiteMove) { //TO DO: make one for loop with one ArrayList
+            //if(whiteMove) list = whitePawn and so on
             for (Pawn wPawn : whitePawn) {
                 wPawn.setPawnTree(new DecisionTree(wPawn.getPosition()));
                 consideredPawn = wPawn;
@@ -154,35 +160,124 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void checkForBestMove() {
-        ArrayList<GameNode> pawnToMove = new ArrayList<>();
+        if(gameTree == null) {
+            PlayableTile[] currentBoard = new PlayableTile[50];
+            ArrayList<Pawn> currentWhite = new ArrayList<>();
+            ArrayList<Pawn> currentBrown = new ArrayList<>();
+
+            for(int i=0; i<currentBoard.length; i++) //deep copies of tiles and pawns
+                currentBoard[i] = new PlayableTile(playableTile[i]);
+            for(int i=0; i<whitePawn.size(); i++)
+                currentWhite.add(new Pawn(whitePawn.get(i)));
+            for(int i=0; i<brownPawn.size(); i++)
+                currentBrown.add(new Pawn(brownPawn.get(i)));
+
+            gameTree = new GameTree(currentBoard, currentWhite, currentBrown); //only to initialize
+            Log.v("Tree", "Initialized");
+        }
+
+        //while(nodeLevel <= 3) { //check for best moves only three levels deep
+        if(gameTree != null) {
+            if(whiteMove) searchNodes(whitePawn, gameTree, gameTree.getCurrentNode().getLevel());
+            else searchNodes(brownPawn, gameTree, gameTree.getCurrentNode().getLevel());
+        }
+
         Random rand = new Random();
-        for (Pawn bPawn : brownPawn) {
-            chosenPawn = bPawn; //to add gameNodes for queen
-            if (mandatoryPawn) {
-                if (bPawn.getPawnTree() != null) {
-                    for(ArrayList<Integer> branch : bPawn.getPawnTree().treeBranch) {
-                        pawnToMove.add(new GameNode(bPawn, branch.get(takeNumber)));
+        int r = rand.nextInt(gameTree.gameNodeList.size()- 1);
+        GameNode chosenNode = gameTree.gameNodeList.get(r+1);
+        gameTree = null; //all checked - tree is not needed anymore
+        chosenPawn = chosenNode.getPawn();
+        if(!mandatoryPawn) {
+            possibleMove.add(chosenNode.moveList.get(0));
+            makeMove(chosenNode.moveList.get(0)); //make proper move as brown
+        }
+        else {
+            for(Integer move : chosenNode.moveList) {
+                possibleMove.add(move);
+                Log.v("Move made", ""+chosenPawn.getPosition()+ " "+chosenNode.getMove());
+                makeMove(move); //make proper move as brown
+            }
+        }
+        endMove();
+
+        for(Pawn pawn1 : brownPawn) {
+            Log.v("Updated pawn", ""+pawn1.getPosition());
+        }
+    }
+
+    public void searchNodes(ArrayList<Pawn> pawnColor, GameTree gameTree, int nodeLevel) {
+        ArrayList<Integer> moveList = new ArrayList<>(); //combination of moves to get to specific node
+        int log = 1;
+        for (Pawn pawn : pawnColor) {
+            Log.v("How many loops", ""+log);
+            if (mandatoryPawn) { //TO DO: checking multiple taking - the same pawn
+                if (pawn.getPawnTree() != null) {
+                    /*if(takeNumber == 0)*/ chosenPawn = pawn; //if not - make move with the same pawn (it is multiple taking)
+                    for(ArrayList<Integer> branch : chosenPawn.getPawnTree().treeBranch) {
+                        //while(takeNumber <= branch.size()-1) { //take all the pawns and then save
+                            Log.v("Nodes for pawn", ""+branch.size());
+                            for(int i=0; i<branch.size(); i++) {
+                                Log.v("Game Node", ""+pawn.getPosition() + " " + branch.get(i));
+                                moveList.add(branch.get(i));
+                                makeMove(branch.get(i)); //it's just saving board state
+                            }
+
+                            Log.v("Move level", ""+takeNumber);
+                        //} //TO DO: do it with while or find the same pawn as chosen on next level of taking
+                            //if(takeNumber == chosenPawn.getPawnTree().getLongestBranch()-1)
+                                gameTree.gameNodeList.add(new GameNode(gameTree.gameNodeList.size(),
+                                gameTree.getCurrentNode().getId(), nodeLevel,
+                                pawn, new ArrayList<Integer>(moveList),
+                                playableTile, whitePawn, brownPawn
+                        ));
+                        moveList.clear();
+                        resetBoardState();
                     }
                 }
             }
             else {
-                int movesNumber = possibleMove.size();
-                checkPossibleMoves(bPawn);
-                if(possibleMove.size() != movesNumber) { //there are moves for this particular pawn
-                    for(int i=1; i<=possibleMove.size() - movesNumber; i++) {
-                        pawnToMove.add(
-                                new GameNode(bPawn, possibleMove.get(possibleMove.size() - i)));
+                chosenPawn = pawn;
+                checkPossibleMoves(pawn);
+                if(possibleMove.size() > 0) { //there are moves for this particular pawn
+                    for(int i=1; i<=possibleMove.size(); i++) {
+                        moveList.add(possibleMove.get(possibleMove.size() - i));
+                        makeMove(possibleMove.get(possibleMove.size() - i));
+                        gameTree.gameNodeList.add(new GameNode(gameTree.gameNodeList.size(),
+                                gameTree.getCurrentNode().getId(), nodeLevel,
+                                pawn, new ArrayList<Integer>(moveList),
+                                playableTile, whitePawn, brownPawn
+                        ));
+                        moveList.clear();
+                        resetBoardState();
                     }
+                    possibleMove.clear(); //possible move checked, there will be different for another board situation
                 }
-                possibleMove.clear(); //possible move checked, but only one can chosen
             }
-            Log.v("How many moves", ""+pawnToMove.size());
+            log++;
         }
-        GameNode chosenNode = pawnToMove.get(rand.nextInt(pawnToMove.size()));
-        Log.v("Chosen node", ""+chosenNode.getPawn().getPosition()+" "+chosenNode.getMove());
-        chosenPawn = chosenNode.getPawn();
-        possibleMove.add(chosenNode.getMove());
-        makeMove(chosenNode.getMove());
+
+    }
+
+    public void resetBoardState() {
+        for(int i=0; i<playableTile.length; i++) { //get deep copy - current board state
+            playableTile[i].setIsTaken(gameTree.getCurrentNode().getBoardState()[i].getIsTaken());
+        }
+        for(int i=0; i<gameTree.getCurrentNode().whiteState.size(); i++) {
+            if(i < whitePawn.size()) {
+                whitePawn.get(i).setPosition(gameTree.getCurrentNode().whiteState.get(i).getPosition());
+                whitePawn.get(i).setIsQueen(gameTree.getCurrentNode().whiteState.get(i).getIsQueen());
+                whitePawn.get(i).setFirstDiagonal(gameTree.getCurrentNode().whiteState.get(i).getFirstDiagonal());
+                whitePawn.get(i).setSecondDiagonal(gameTree.getCurrentNode().whiteState.get(i).getSecondDiagonal());
+            }
+        }
+        for(int i=0; i<gameTree.getCurrentNode().brownState.size(); i++) {
+            if(i < brownPawn.size()) {
+                brownPawn.get(i).setPosition(gameTree.getCurrentNode().brownState.get(i).getPosition());
+                brownPawn.get(i).setIsQueen(gameTree.getCurrentNode().brownState.get(i).getIsQueen());
+                brownPawn.get(i).setFirstDiagonal(gameTree.getCurrentNode().brownState.get(i).getFirstDiagonal());
+                brownPawn.get(i).setSecondDiagonal(gameTree.getCurrentNode().brownState.get(i).getSecondDiagonal());
+            }
+        }
     }
 
     public void checkMandatoryMove(int position, int takenPawn) { //takenPawn = -1/-2 means brown pawn/queen can be taken
@@ -407,11 +502,11 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
     public void makeMove(int destination) {
         boolean validMove = false;
+
         if(chosenPawn != null) { //a pawn has been clicked - so it can be moved (or not - if it has no possible moves)
             for (Integer move : possibleMove) {
                 if (destination == move) { //chosen tile is a valid move
                     playableTile[chosenPawn.getPosition() - 1].setIsTaken(0); //free previous position
-                    Log.v("Pawn", ""+chosenPawn.getPosition());
                     if(!chosenPawn.getIsQueen()) {
                         if(whiteMove) playableTile[destination - 1].setIsTaken(1); //set pawn on new position
                         else playableTile[destination - 1].setIsTaken(-1);
@@ -464,22 +559,28 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     }
 
                     chosenPawn.setPosition(destination);
+                    Log.v("Destination", ""+chosenPawn.getPosition());
                     validMove = true;
                     break;
                 }
             }
 
-            if(validMove) {
+            if(validMove && whiteMove) { //multiple taking for player; for cpu it is done in checkForBestMove
                 if(mandatoryPawn) {
                     possibleMove.clear();
+                    Log.v("Multiple taking?", ""+chosenPawn.getPosition());
                     takeNumber++;
-                    checkPossibleMoves(chosenPawn); //there might be multiple taking
+                    if(whiteMove) checkPossibleMoves(chosenPawn); //there might be multiple taking
                     if(possibleMove.size() != 0) {
                         if(whiteMove) {
                             markPawn(chosenPawn, destination);
                             markPossibleMove();
                         }
-                        else checkForBestMove(); //check for next pawn to take (or choose one if there are moree of them)
+                        else {
+                            //checkForBestMove();
+                        }
+                            //check for next pawn to take (or choose one if there are more of them)
+                                //there is while loop in checkForBestMove (no, there isn't
                     }
                     else endMove();
                 }
@@ -498,14 +599,20 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             chosenPawn.setIsQueen(true);
         }
 
-        chosenPawn = null;
-        whiteMove = !whiteMove;
         mandatoryPawn = false;
         takeNumber = 0;
-        drawPawns();
+        if(gameTree == null) { //is this making a move or just checking for the best one?
+            chosenPawn = null;
+            possibleMove.clear();
+            whiteMove = !whiteMove; //if it's just checking, then there is more of this come - for the same color
+            drawPawns(); //and there's no need for displaying one state from many - unless it will be chosen as a proper move
+            Log.v("Tree", "Checking done");
+        }
+        else Log.v("Tree", "Just another checking");
+
     }
 
-    public void takePawn(int pos) {
+    public void takePawn(int pos) { //one array list if(whiteMove) list = whitePawn;
         playableTile[pos - 1].setIsTaken(0);
         if(whiteMove) {
             for (Pawn bPawn : brownPawn) {

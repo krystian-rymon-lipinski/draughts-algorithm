@@ -9,6 +9,11 @@ public class PlayableTile {
         this.isTaken = isTaken; //0 = free, 1 = white pawn, -1 = brown pawn, 2 = white queen, -2 = brown queen
     }
 
+    public PlayableTile(PlayableTile tile) {
+        this.value = tile.getValue();
+        this.isTaken = tile.getIsTaken();
+    }
+
     public int getValue() { return value; }
     public int getIsTaken() { return isTaken; }
 

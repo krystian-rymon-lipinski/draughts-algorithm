@@ -1,6 +1,6 @@
 package com.krystian.checkers;
 
-public class Pawn {
+public class Pawn extends java.lang.Object implements java.lang.Cloneable {
     private int position;
     private boolean isWhite;
     private boolean isQueen;
@@ -21,6 +21,8 @@ public class Pawn {
         this.position = pawn.getPosition();
         this.isWhite = pawn.getIsWhite();
         this.isQueen = pawn.getIsQueen();
+        this.firstDiagonal = pawn.getFirstDiagonal();
+        this.secondDiagonal = pawn.getSecondDiagonal();
     }
 
     public int getPosition() { return position; }
@@ -36,5 +38,10 @@ public class Pawn {
     public void setFirstDiagonal(int[] firstDiagonal) { this.firstDiagonal = firstDiagonal; }
     public void setSecondDiagonal(int[] secondDiagonal) { this.secondDiagonal = secondDiagonal; }
     public void setPawnTree(DecisionTree pawnTree) { this.pawnTree = pawnTree; }
+
+    /*public Pawn clone() {
+
+        return pawn;
+    }*/
 
 }

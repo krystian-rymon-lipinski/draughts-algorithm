@@ -1,30 +1,33 @@
 package algorithmPackage;
 
-import com.krystian.checkers.GameActivity;
+import com.krystian.checkers.Pawn;
 import com.krystian.checkers.PlayableTile;
+import java.util.ArrayList;
+
 
 public class GameTree {
-    private PlayableTile[] currentBoard = new PlayableTile[50];
-    private int metrics = 0;
-    private GameActivity gameActivity;
-    //private PlayableTile[] board = gameActivity.
-    public GameTree(PlayableTile[] currentBoard) {
-        this.currentBoard = currentBoard;
-        calculateMetrics();
+    private int rootMetrics = 0; //white to brown point ratio in the current board state
+    private GameNode currentNode;
+    private GameNode previousNode;
+    public ArrayList<GameNode> gameNodeList = new ArrayList<>();
+    public ArrayList<GameNode[]> gameBranch = new ArrayList<>();
+
+    public GameTree(PlayableTile[] currentBoard, ArrayList<Pawn> whitePawn, ArrayList<Pawn> brownPawn) {
+        calculateMetrics(currentBoard);
+        currentNode = new GameNode(0, 0, 0, null, null, currentBoard, whitePawn, brownPawn); //root - present state of the board
+        previousNode = currentNode;
+        gameNodeList.add(currentNode);
     }
 
-    private void calculateMetrics() {
+    private void calculateMetrics(PlayableTile[] currentBoard) {
         for(PlayableTile tile : currentBoard) {
-            if(tile.getIsTaken() == 1) metrics--;
-            else if(tile.getIsTaken() == -1) metrics++;
-            else if(tile.getIsTaken() == 2) metrics -=3;
-            else if(tile.getIsTaken() == -2) metrics =+3;
+            if(tile.getIsTaken() == 1) rootMetrics--;
+            else if(tile.getIsTaken() == -1) rootMetrics++;
+            else if(tile.getIsTaken() == 2) rootMetrics -=3;
+            else if(tile.getIsTaken() == -2) rootMetrics =+3;
         }
     }
 
-    public PlayableTile[] getCurrentBoard() { return currentBoard; }
-    public int getMetrics() { return metrics; }
-
-    public void setCurrentBoard(PlayableTile[] currentBoard) { this.currentBoard = currentBoard; }
-    public void setMetrics(int metrics) { this.metrics = metrics; }
+    public GameNode getCurrentNode() {return currentNode;}
+    public GameNode getPreviousNode() {return previousNode;}
 }
