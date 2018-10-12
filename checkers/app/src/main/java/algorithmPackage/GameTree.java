@@ -4,30 +4,29 @@ import com.krystian.checkers.Pawn;
 import com.krystian.checkers.PlayableTile;
 import java.util.ArrayList;
 
-
 public class GameTree {
-    private int rootMetrics = 0; //white to brown point ratio in the current board state
-    private GameNode currentNode;
-    private GameNode previousNode;
-    public ArrayList<GameNode> gameNodeList = new ArrayList<>();
-    public ArrayList<GameNode[]> gameBranch = new ArrayList<>();
+    private PlayableTile[] boardState = new PlayableTile[50];
+    public ArrayList<Pawn> whiteState = new ArrayList<>();
+    public ArrayList<Pawn> brownState = new ArrayList<>();
+
+    public ArrayList<GameNode> gameNodeList = new ArrayList<>(); //all found nodes
+    public ArrayList<GameNode> bestNodeList = new ArrayList<>(); //just the best ones
+    private GameNode currentNode = null;
+    private boolean allNodesFound = false;
+
+    public ArrayList<Pawn> pawnToRestore = new ArrayList<>(); //if there was taking in gameNode, but there are others to check
+    public ArrayList<Integer> restoringPawnIndex = new ArrayList<>();
 
     public GameTree(PlayableTile[] currentBoard, ArrayList<Pawn> whitePawn, ArrayList<Pawn> brownPawn) {
-        calculateMetrics(currentBoard);
-        currentNode = new GameNode(0, 0, 0, null, null, currentBoard, whitePawn, brownPawn); //root - present state of the board
-        previousNode = currentNode;
-        gameNodeList.add(currentNode);
-    }
+        this.boardState = currentBoard;
+        this.whiteState = whitePawn;
+        this.brownState = brownPawn;
 
-    private void calculateMetrics(PlayableTile[] currentBoard) {
-        for(PlayableTile tile : currentBoard) {
-            if(tile.getIsTaken() == 1) rootMetrics--;
-            else if(tile.getIsTaken() == -1) rootMetrics++;
-            else if(tile.getIsTaken() == 2) rootMetrics -=3;
-            else if(tile.getIsTaken() == -2) rootMetrics =+3;
-        }
     }
 
     public GameNode getCurrentNode() {return currentNode;}
-    public GameNode getPreviousNode() {return previousNode;}
+    public PlayableTile[] getBoardState() {return boardState;}
+    public boolean getAllNodesFound() { return allNodesFound; }
+    public void setCurrentNode(GameNode currentNode) {this.currentNode = currentNode;}
+    public void setAllNodesFound(boolean allNodesFound) { this.allNodesFound = allNodesFound; }
 }
