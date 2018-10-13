@@ -1,4 +1,4 @@
-package com.krystian.checkers;
+package com.krystian.checkers.gameMechanics;
 
 public class PlayableTile {
     private int value;

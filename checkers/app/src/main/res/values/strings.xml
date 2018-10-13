@@ -1,7 +1,22 @@
 <resources>
-    <string name="app_name">Checkers</string>
+    <string name="app_name">Warcaby</string>
+    <string name="stats_name">Statystyki</string>
+    <string name="analysis_name">Analiza</string>
 
-    <string name="play">Zagraj</string>
-    <string name="stats">Statystyki</string>
-    <string name="games_history">Historia partii</string>
+    <!-- Main Activity -->
+    <string name="play_button">Zagraj</string>
+    <string name="stats_button">Statystyki</string>
+    <string name="games_history_button">Historia partii</string>
+
+    <!-- Stats Activity -->
+    <string name="games_played">Ilość gier:</string>
+    <string name="games_won">Ilość wygranych:</string>
+    <string name="win_percentage">Procent wygranych:</string>
+    <string name="stats_number">%1$d</string>
+    <string name="stats_percent">%1$d%%</string>
+
+    <!-- GameReview Acticity -->
+    <string name="backward_arrow"> \u003c  </string>
+    <string name="forward_arrow"> \u003e </string>
+
 </resources>

@@ -1,8 +1,7 @@
-package com.krystian.checkers;
+package com.krystian.checkers.gameMechanics;
 
 
 import java.util.ArrayList;
-import java.util.Deque;
 
 public class DecisionTree { //possible paths of multiple or simple taking; one decision tree is one pawn
     private int root;
@@ -34,5 +33,6 @@ public class DecisionTree { //possible paths of multiple or simple taking; one d
     public void setCurrentNode(TreeNode currentNode) { this.currentNode = currentNode; }
     public void setPreviousNode(TreeNode previousNode) { this.previousNode = previousNode; }
 }
+
 
 

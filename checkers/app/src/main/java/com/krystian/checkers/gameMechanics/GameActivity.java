@@ -15,7 +15,7 @@
     - taking pawns (if possible) is mandatory; longest take is mandatory - doesn't matter if it's a queen or not
     */
 
-package com.krystian.checkers;
+package com.krystian.checkers.gameMechanics;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -28,9 +28,9 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.Random;
 
-import algorithmPackage.GameNode;
-import algorithmPackage.GameTree;
-
+import com.krystian.checkers.AI_algorithm.GameNode;
+import com.krystian.checkers.AI_algorithm.GameTree;
+import com.krystian.checkers.R;
 
 
 public class GameActivity extends AppCompatActivity implements View.OnClickListener {
@@ -47,11 +47,17 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     ArrayList<Pawn> brownPawn = new ArrayList<>();
     ArrayList<Integer> possibleMove = new ArrayList<>();
     boolean whiteMove = true;
+
     Pawn chosenPawn; //to set new position and check possible moves for a specific (marked) pawn
     Pawn consideredPawn; //to check mandatory moves for every pawn
     boolean mandatoryPawn = false; //is there a pawn (or more) that has to take another one(s)?
+
     int takeNumber = 0; //to show possible moves during multiple taking (if there are more branches from specific node)
-    GameTree gameTree = null;
+    GameTree gameTree = null; //to check moves or cpu
+
+    String whiteMoves = ""; //for database saving using checkers notation
+    String brownMoves = "";
+    String boardStates = "";
 
 
     public GameActivity() {};
@@ -273,7 +279,9 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             makeMove(chosenNode.moveList.get(0)); //make proper move as brown
         }
         else {
+            mandatoryPawn = true;
             for(Integer move : chosenNode.moveList) {
+                takeNumber = chosenNode.moveList.indexOf(move);
                 possibleMove.add(move);
                 Log.v("Pawn moved", ""+chosenPawn.getPosition());
                 Log.v("Move done", ""+move);
@@ -678,16 +686,18 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                                 }
                             }
                         }
+
                     }
+                    addMoveToDatabase(destination); //but to a global variable first
                     chosenPawn.setPosition(destination);
                     validMove = true;
                     break;
                 }
             }
 
-            if(gameTree == null && validMove && whiteMove) { //multiple taking for player; for cpu it is done in checkForBestMove -
-                if(mandatoryPawn) {                          // - for every GameTree node respectively
-                    possibleMove.clear();
+            if(gameTree == null && validMove && whiteMove) { //multiple taking for player; for cpu makeMove()
+                if(mandatoryPawn) {                          // is called multiple times in checkForMoves -
+                    possibleMove.clear();                   // - for every GameTree node respectively
                     takeNumber++;
                     checkPossibleMoves(chosenPawn); //there might be multiple taking
                     if(possibleMove.size() != 0) {
@@ -701,30 +711,55 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    public void addMoveToDatabase(int destination) { //but first to global variable
+        if(gameTree == null || gameTree.getAllNodesFound()) { //it's either player's move or final decision for cpu
+            String move = "";
+            if(takeNumber == 0) move += chosenPawn.getPosition(); //starting point in notation
+            if(chosenPawn.getIsQueen() && takeNumber == 0) move += "(D)"; //notation sign for queen
+            if(mandatoryPawn) move += "x"; //notation sign for taking
+            else move += "-"; //notation sign for regular move
+            move += destination; //ending (or mid) point
+
+            if(whiteMove) whiteMoves += move;
+            else brownMoves += move;
+        }
+    }
+
     public void endMove() {
-        if(chosenPawn.getIsWhite() && !chosenPawn.getIsQueen() && (chosenPawn.getPosition()-1)/5 == 0) {
-            playableTile[chosenPawn.getPosition() - 1].setIsTaken(2); //white pawn promoted
-            chosenPawn.setIsQueen(true); //pawn in the last row
+        if(chosenPawn.getIsWhite() && !chosenPawn.getIsQueen() && (chosenPawn.getPosition()-1)/5 == 0) { //pawn in the last row
+            playableTile[chosenPawn.getPosition() - 1].setIsTaken(2); //white pawn promoted;
+            chosenPawn.setIsQueen(true); //only if he finished his moves/takes
+            whiteMoves += "=D"; //notation sign for pawn promotion
         }
         else if(!chosenPawn.getIsWhite() && !chosenPawn.getIsQueen() && (chosenPawn.getPosition()-1)/5 == 9) {
             playableTile[chosenPawn.getPosition() - 1].setIsTaken(-2);
             chosenPawn.setIsQueen(true);
+            if(gameTree == null) brownMoves += "=D";
         }
         mandatoryPawn = false;
         takeNumber = 0;
         if(gameTree == null) { //making move
+            for(PlayableTile tile : playableTile) {
+                boardStates += tile.getIsTaken();
+            }
+            boardStates += "#"; //end of one state to know where to read it from database
+            if(whiteMove) whiteMoves += "#";
+            else brownMoves += "#";
+
             chosenPawn = null;
             possibleMove.clear();
             whiteMove = !whiteMove; //time for next move
             drawPawns(); //display current state of the board
         }
-        else { //it's time for another level of cpu move analysis
-            //if(gameTree.getCurrentNode().getLevel() >= 0) {
-                chosenPawn = null;
-                possibleMove.clear();
-                whiteMove = !whiteMove;
-            //}
+        else { //next level for cpu analysis - no need for drawing changes
+            chosenPawn = null;
+            possibleMove.clear();
+            whiteMove = !whiteMove;
         }
+
+        Log.v("White database", whiteMoves);
+        Log.v("Brown database", brownMoves);
+        Log.v("Board database", boardStates);
 
     }
 

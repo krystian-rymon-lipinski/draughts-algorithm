@@ -6,6 +6,7 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:background">@color/background</item>
     </style>
 
     <!-- Main activity buttons -->
@@ -15,6 +16,35 @@
         <item name="android:layout_margin">10dp</item>
         <item name="android:layout_gravity">center</item>
         <item name="android:background">@color/buttons</item>
+    </style>
 
+    <!-- Stats Activity strings -->
+    <style name="StatsStrings">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">40sp</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:textColor">@color/statsStringsColor</item>
+    </style>
+
+    <style name="StatsStringsValues">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">56sp</item>
+        <item name="android:layout_margin">16dp</item>
+        <item name="android:textColor">@color/statsValuesColor</item>
+    </style>
+
+    <!-- Arrow to navigate through analysis -->
+    <style name="AnalysisButtons">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:textColor">@color/background</item>
+        <item name="android:color">@color/buttons</item>
+        <item name="android:gravity">center</item>
     </style>
 </resources>

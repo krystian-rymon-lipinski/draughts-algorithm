@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.krystian.checkers.database.StatsActivity"
+    android:orientation="vertical" >
+
+    <TextView
+        style = "@style/StatsStrings"
+        android:text="@string/games_played" />
+    <TextView android:id="@+id/played_games"
+        style="@style/StatsStringsValues"
+        android:text="@string/stats_number"/>
+    <TextView
+        style = "@style/StatsStrings"
+        android:text="@string/games_won" />
+    <TextView android:id="@+id/won_games"
+        style="@style/StatsStringsValues"
+        android:text="@string/stats_number"/>
+    <TextView
+        style = "@style/StatsStrings"
+        android:text="@string/win_percentage" />
+    <TextView android:id="@+id/percent"
+        style="@style/StatsStringsValues"
+        android:text="@string/stats_percent"/>
+</LinearLayout>

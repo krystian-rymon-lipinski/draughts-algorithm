@@ -1,4 +1,4 @@
-package com.krystian.checkers;
+package com.krystian.checkers.gameMechanics;
 
 import java.util.ArrayList;
 

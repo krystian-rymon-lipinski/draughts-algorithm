@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.krystian.checkers.database.GameReviewActivity">
+
+    <TextView android:id="@+id/game"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="15"
+        android:text="Partia nr x"
+        android:textSize="32sp"
+        android:textColor="@color/itemColor"
+        android:gravity="center" />
+
+
+    <GridLayout android:id="@+id/board"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="70"
+        android:columnCount="10"
+        android:rowCount="10"
+        android:background="@color/brownTile">
+    </GridLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="15">
+
+        <Button
+            style = "@style/AnalysisButtons"
+            android:layout_weight="1"
+            android:text="@string/backward_arrow"
+            android:textSize="40sp" />
+        <TextView
+            style = "@style/AnalysisButtons"
+            android:textSize="16sp"
+            android:layout_weight="3"
+            android:textColor="@color/buttons"
+            android:text="17. ... 44x33x22x11x2x13x24"/>
+        <Button
+            style = "@style/AnalysisButtons"
+            android:layout_weight="1"
+            android:text="@string/forward_arrow"
+            android:textSize="40sp" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,4 +1,4 @@
-package com.krystian.checkers;
+package com.krystian.checkers.gameMechanics;
 
 public class Pawn extends java.lang.Object implements java.lang.Cloneable {
     private int position;
@@ -38,10 +38,5 @@ public class Pawn extends java.lang.Object implements java.lang.Cloneable {
     public void setFirstDiagonal(int[] firstDiagonal) { this.firstDiagonal = firstDiagonal; }
     public void setSecondDiagonal(int[] secondDiagonal) { this.secondDiagonal = secondDiagonal; }
     public void setPawnTree(DecisionTree pawnTree) { this.pawnTree = pawnTree; }
-
-    /*public Pawn clone() {
-
-        return pawn;
-    }*/
 
 }

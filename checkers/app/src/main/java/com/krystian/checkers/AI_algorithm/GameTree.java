@@ -1,7 +1,7 @@
-package algorithmPackage;
+package com.krystian.checkers.AI_algorithm;
 
-import com.krystian.checkers.Pawn;
-import com.krystian.checkers.PlayableTile;
+import com.krystian.checkers.gameMechanics.Pawn;
+import com.krystian.checkers.gameMechanics.PlayableTile;
 import java.util.ArrayList;
 
 public class GameTree {

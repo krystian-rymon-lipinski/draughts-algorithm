@@ -5,13 +5,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="com.krystian.checkers.GameActivity">
+    tools:context="com.krystian.checkers.gameMechanics.GameActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="14.77"
-        android:background="#454545">
+        >
     </LinearLayout>
 
     <GridLayout android:id="@+id/board"

@@ -11,14 +11,14 @@
 
     <Button android:id="@+id/play"
         style = "@style/MainButtons"
-        android:text="@string/play" />
+        android:text="@string/play_button" />
 
     <Button android:id="@+id/stats"
         style = "@style/MainButtons"
-        android:text="@string/stats" />
+        android:text="@string/stats_button" />
 
     <Button android:id="@+id/history"
         style = "@style/MainButtons"
-        android:text="@string/games_history" />
+        android:text="@string/games_history_button" />
 
 </LinearLayout>

@@ -16,7 +16,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".GameActivity"></activity>
+        <activity android:name=".gameMechanics.GameActivity" />
+        <activity android:name=".database.StatsActivity"
+            android:label="@string/stats_name"/>
+        <activity android:name=".database.GamesListActivity" />
+        <activity android:name=".database.GameReviewActivity"
+            android:label="@string/analysis_name"/>
     </application>
 
 </manifest>

@@ -6,6 +6,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
+import com.krystian.checkers.gameMechanics.GameActivity;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     @Override
@@ -26,13 +28,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         switch(v.getId()) {
             case R.id.play:
-                startActivity(new Intent(this, GameActivity.class));
+                startActivity(new Intent(this, com.krystian.checkers.gameMechanics.GameActivity.class));
                 break;
             case R.id.stats:
-                //startActivity(new Intent(this, GameActivity.class));
+                startActivity(new Intent(this, com.krystian.checkers.database.StatsActivity.class));
                 break;
             case R.id.history:
-                //startActivity(new Intent(this, GameActivity.class));
+                startActivity(new Intent(this, com.krystian.checkers.database.GamesListActivity.class));
                 break;
             default: break;
         }

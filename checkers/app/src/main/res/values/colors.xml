@@ -11,9 +11,14 @@
     <!-- Game Activity -->
     <color name="whiteTile">#ebf1ef</color>
     <color name="whitePawn">#ffffff</color>
-
     <color name="brownTile">#9f7563</color>
     <color name="brownPawn">#7e5d4f</color>
-
     <color name="possibleMove">#40FF40</color>
+
+    <!-- Stats Activity -->
+    <color name="statsStringsColor">#DC9988</color>
+    <color name="statsValuesColor">#E24C23</color>
+
+    <!-- GamesListActivity -->
+    <color name="itemColor">#BEBEBE</color>
 </resources>

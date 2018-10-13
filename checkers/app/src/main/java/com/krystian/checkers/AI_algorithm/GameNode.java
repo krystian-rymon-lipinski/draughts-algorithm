@@ -1,15 +1,8 @@
-package algorithmPackage;
+package com.krystian.checkers.AI_algorithm;
 
-import android.util.Log;
-
-import com.krystian.checkers.Pawn;
-import com.krystian.checkers.PlayableTile;
-import com.krystian.checkers.GameActivity;
+import com.krystian.checkers.gameMechanics.Pawn;
 
 import java.util.ArrayList;
-
-import static android.R.attr.id;
-import static android.R.attr.level;
 
 public class GameNode {
     private Pawn pawn; //which pawn has been moved
