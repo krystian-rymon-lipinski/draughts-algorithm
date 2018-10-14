@@ -17,6 +17,12 @@
 
 package com.krystian.checkers.gameMechanics;
 
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.DatabaseErrorHandler;
+import android.database.DatabaseUtils;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -31,6 +37,7 @@ import java.util.Random;
 import com.krystian.checkers.AI_algorithm.GameNode;
 import com.krystian.checkers.AI_algorithm.GameTree;
 import com.krystian.checkers.R;
+import com.krystian.checkers.database.GameDatabaseHelper;
 
 
 public class GameActivity extends AppCompatActivity implements View.OnClickListener {
@@ -168,12 +175,45 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
     public void checkGameState() {
 
-        if(whitePawn.size() == 0 || (!mandatoryPawn && possibleMove.size() == 0)) { //all pawns are taken OR BLOCKED
-            Toast.makeText(this, "Przegrana!", Toast.LENGTH_SHORT).show();
+        if(whitePawn.size() == 0 || brownPawn.size() == 0) { //a game just ended
+            try {
+                GameDatabaseHelper dbHelper = new GameDatabaseHelper(this);
+                SQLiteDatabase db = dbHelper.getWritableDatabase();
+                Cursor cursor = db.query("STATS", new String[]{"PLAYED", "WON"}, null, null, null, null, null);
+                cursor.moveToFirst();
+                int gamesPlayed = cursor.getInt(0) + 1; //just finished game - need to update database
+                int gamesWon = cursor.getInt(1);
+                if(whitePawn.size() == 0) {
+                    Toast.makeText(this, "Przegrana!", Toast.LENGTH_SHORT).show();
+                    brownMoves += "X"; //notation for the end of a game
+                }
+                else if(brownPawn.size() == 0) {
+                    Toast.makeText(this, "Wygrana!", Toast.LENGTH_SHORT).show();
+                    whiteMoves += "X";
+                    gamesWon++;
+                }
+                ContentValues statsUpdate = new ContentValues();
+                statsUpdate.put("PLAYED", gamesPlayed);
+                statsUpdate.put("WON", gamesWon);
+                db.update("STATS", statsUpdate, null, null); //update games number (only one record in this table)
+
+                long gameIndex = DatabaseUtils.queryNumEntries(db, "GAMES") + 1;
+                ContentValues gamesUpdate = new ContentValues();
+                gamesUpdate.put("NUMBER", gameIndex);
+                gamesUpdate.put("NAME", "Partia #"+gameIndex);
+                gamesUpdate.put("WHITE", whiteMoves);
+                gamesUpdate.put("BROWN", brownMoves);
+                gamesUpdate.put("BOARD", boardStates);
+                db.insert("GAMES", null, gamesUpdate); //add another game for analysis
+
+                cursor.close();
+                db.close();
+            } catch(SQLiteException e) {
+                Toast.makeText(this, "Brak dostępu do bazy danych", Toast.LENGTH_SHORT).show();
+            }
         }
-        else if(brownPawn.size() == 0 || (!mandatoryPawn && possibleMove.size() == 0)) {
-            Toast.makeText(this, "Wygrana!", Toast.LENGTH_SHORT).show();
-        }
+
+
     }
 
     public void checkForMoves() {

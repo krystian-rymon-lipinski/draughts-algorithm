@@ -31,18 +31,17 @@
         android:layout_height="0dp"
         android:layout_weight="15">
 
-        <Button
+        <Button android:id="@+id/left_arrow"
             style = "@style/AnalysisButtons"
             android:layout_weight="1"
             android:text="@string/backward_arrow"
             android:textSize="40sp" />
-        <TextView
+        <TextView android:id="@+id/move_description"
             style = "@style/AnalysisButtons"
             android:textSize="16sp"
             android:layout_weight="3"
-            android:textColor="@color/buttons"
-            android:text="17. ... 44x33x22x11x2x13x24"/>
-        <Button
+            android:textColor="@color/buttons" />
+        <Button android:id="@+id/right_arrow"
             style = "@style/AnalysisButtons"
             android:layout_weight="1"
             android:text="@string/forward_arrow"

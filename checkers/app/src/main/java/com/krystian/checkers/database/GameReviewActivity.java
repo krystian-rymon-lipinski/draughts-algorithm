@@ -1,11 +1,15 @@
 package com.krystian.checkers.database;
 
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.krystian.checkers.R;
 import com.krystian.checkers.gameMechanics.GameActivity;
@@ -15,29 +19,77 @@ import com.krystian.checkers.gameMechanics.PlayableTile;
 import static com.krystian.checkers.R.color.brownPawn;
 import static com.krystian.checkers.R.color.whitePawn;
 import static com.krystian.checkers.R.id.board;
+import static com.krystian.checkers.R.id.game;
 import static com.krystian.checkers.gameMechanics.GameActivity.NUMBER_OF_PAWNS;
 import static com.krystian.checkers.gameMechanics.GameActivity.NUMBER_OF_PLAYABLE_TILES;
 import static com.krystian.checkers.gameMechanics.GameActivity.NUMBER_OF_TILES;
 
-public class GameReviewActivity extends AppCompatActivity {
+public class GameReviewActivity extends AppCompatActivity implements View.OnClickListener {
 
 
     GridLayout board;
     PlayableTile[] playableTile = new PlayableTile[NUMBER_OF_PLAYABLE_TILES];
     View[] playableTileView = new View[NUMBER_OF_PLAYABLE_TILES];
+    int gameNumber;
+    int currentMoveNumber = 0;
+    boolean whiteToMove = true;
+    TextView game;
+    TextView moveDescription;
+    String whiteMoves;
+    String brownMoves;
+    String boardStates;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game_review);
 
-        GameActivity gameActivity = new GameActivity();
         board = (GridLayout) findViewById(R.id.board);
-        int gameNumber = (Integer) getIntent().getExtras().get("Game Number");
-        TextView game = (TextView) findViewById(R.id.game);
-        game.setText(String.valueOf(gameNumber));
+        game = (TextView) findViewById(R.id.game);
+        moveDescription = (TextView) findViewById(R.id.move_description);
+        gameNumber = (Integer) getIntent().getExtras().get("GameNumber");
 
-        //gameActivity.measureBoard();
+        getGameFromDatabase();
         measureBoard();
+    }
+
+    public void onClick(View view) {
+        switch(view.getId()) {
+            case R.id.left_arrow:
+                if(currentMoveNumber != 0) {
+                    if(whiteToMove) currentMoveNumber--; //previous brown move
+                    whiteToMove = !whiteToMove;
+                    setMoveDescription();
+                    setNewState();
+
+                }
+                break;
+            case R.id.right_arrow:
+                if(!whiteToMove) currentMoveNumber++;
+                whiteToMove = !whiteToMove;
+                setMoveDescription();
+                setNewState();
+                break;
+        }
+    }
+
+    public void getGameFromDatabase() {
+        try {
+            GameDatabaseHelper dbHelper = new GameDatabaseHelper(this);
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+            Cursor cursor = db.query("GAMES", new String[]{"NAME", "WHITE", "BROWN", "BOARD"},
+                    "NUMBER = ?", new String[]{Integer.toString(gameNumber)}, null, null, null);
+            game.setText(cursor.getString(0));
+            whiteMoves = cursor.getString(1);
+            brownMoves = cursor.getString(2);
+            boardStates = cursor.getString(3);
+
+            cursor.close();
+            db.close();
+
+        } catch(SQLiteException e) {
+            Toast.makeText(this, "Nie udało się połączyć z bazą danych", Toast.LENGTH_SHORT).show();
+        }
+
     }
 
     public void measureBoard() {
@@ -79,7 +131,7 @@ public class GameReviewActivity extends AppCompatActivity {
         drawPawns();
     }
 
-    public void drawPawns() { //will be useful after every move
+    public void drawPawns() {
         for (int i = 0; i < playableTileView.length; i++) {
             if (playableTile[i].getIsTaken() == 1)
                 playableTileView[i].setBackgroundResource(R.drawable.white_pawn);
@@ -90,6 +142,58 @@ public class GameReviewActivity extends AppCompatActivity {
             else if (playableTile[i].getIsTaken() == -2)
                 playableTileView[i].setBackgroundResource(R.drawable.brown_queen);
             else playableTileView[i].setBackgroundResource(0);
+        }
+    }
+
+    public void setNewState() {
+        int moveCounter = 1;
+        int playableTileIndex = 0;
+        for(int i=0; i<boardStates.length(); i++) {
+            if(boardStates.charAt(i) == '#') {
+                moveCounter++;
+                continue;
+            }
+
+            if(moveCounter == currentMoveNumber) {
+                playableTile[playableTileIndex].setIsTaken(boardStates.charAt(i));
+                playableTileIndex++;
+            }
+            else if(moveCounter > currentMoveNumber) break;
+
+
+
+        }
+        drawPawns();
+    }
+
+    public void setMoveDescription() {
+        int moveCounter = 1;
+        String moveDesc = "";
+
+        if(whiteToMove) {
+            for(int i=0; i<whiteMoves.length(); i++) {
+                if(whiteMoves.charAt(i) == '#') {
+                    moveCounter++;
+                    continue;
+                }
+
+                if(moveCounter == currentMoveNumber) moveDesc += whiteMoves.charAt(i);
+                else if(moveCounter > currentMoveNumber) break;
+            }
+            moveDescription.setText(moveDesc);
+        }
+
+        else {
+            for(int i=0; i<brownMoves.length(); i++) {
+                if(brownMoves.charAt(i) == '#') {
+                    moveCounter++;
+                    continue;
+                }
+
+                if(moveCounter == currentMoveNumber) moveDesc += brownMoves.charAt(i);
+                else if(moveCounter > currentMoveNumber) break;
+            }
+            moveDescription.setText(moveDesc);
         }
     }
 }

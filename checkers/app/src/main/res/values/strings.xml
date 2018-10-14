@@ -13,7 +13,7 @@
     <string name="games_won">Ilość wygranych:</string>
     <string name="win_percentage">Procent wygranych:</string>
     <string name="stats_number">%1$d</string>
-    <string name="stats_percent">%1$d%%</string>
+    <string name="stats_percent">%1$.2f%%</string>
 
     <!-- GameReview Acticity -->
     <string name="backward_arrow"> \u003c  </string>
