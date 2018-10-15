@@ -6,7 +6,8 @@ public class TreeNode {
     private int position; //possible position of a pawn
     private int link; //previous position of a pawn - to bind nodes
     private int level; //how deep in a tree is this node
-    public ArrayList<Integer> takenPawnPosition = new ArrayList<>(); //there might be more than 2 branches from a node (max 4); it's good to know which ones has already been checked
+    public ArrayList<Integer> takenPawnPosition = new ArrayList<>(); //there might be more than 2 branches from a node (max 4);
+    // it's good to know which ones has already been checked
 
     public TreeNode(int position, int link, int level) {
         this.position = position;

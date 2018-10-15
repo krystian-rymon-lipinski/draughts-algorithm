@@ -5,11 +5,11 @@ import com.krystian.checkers.gameMechanics.Pawn;
 import java.util.ArrayList;
 
 public class GameNode {
-    private Pawn pawn; //which pawn has been moved
+    private Pawn pawn; //which pawn has been moved in considered scenario
     public ArrayList<Integer> moveList; //list of moves to get to considered board state
     private boolean isThereTaking; //was there taking after moves from moveList (is there a need to restore pawn(s))
-    private boolean canWhiteTakeAfter;
-    private int lengthOfWhiteTaking; //
+    private boolean canWhiteTakeAfter; //if true, the maybe it is not such a good move for brown
+    private int lengthOfWhiteTaking; //(possible) white taking; 0 if white can't tak after
 
     public GameNode(Pawn pawn, ArrayList<Integer> moveList, boolean isThereTaking) {
         this.pawn = pawn;

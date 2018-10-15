@@ -32,16 +32,16 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
     GridLayout board;
     PlayableTile[] playableTile = new PlayableTile[NUMBER_OF_PLAYABLE_TILES];
     View[] playableTileView = new View[NUMBER_OF_PLAYABLE_TILES];
-    long gameNumber;
+    long gameNumber; //taken fromm the list and got with intent extras
     int currentMoveNumber = 0;
-    int numberOfWhiteMoves = 0;
+    int numberOfWhiteMoves = 0; //from specific (chosen) game
     int numberOfBrownMoves = 0;
     boolean whiteToMove = true;
     TextView game;
     TextView moveDescription;
     Button leftArrow;
     Button rightArrow;
-    String whiteMoves;
+    String whiteMoves; //game progress taken from database
     String brownMoves;
     String boardStates;
     @Override
@@ -63,9 +63,11 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
         for(int i=0; i<whiteMoves.length(); i++) {
             if(whiteMoves.charAt(i) == '#') numberOfWhiteMoves++;
         }
+        Log.v("White moves", ""+numberOfWhiteMoves);
         for(int i=0; i<brownMoves.length(); i++) {
             if(brownMoves.charAt(i) == '#') numberOfBrownMoves++;
         }
+        Log.v("Brown moves", ""+numberOfBrownMoves);
 
         measureBoard();
     }
@@ -74,7 +76,7 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
         switch(view.getId()) {
             case R.id.left_arrow:
                 if(currentMoveNumber != 0) {
-                    if(whiteToMove) currentMoveNumber--; //previous brown move
+                    if(whiteToMove) currentMoveNumber--; // show previous move (brown)
                     whiteToMove = !whiteToMove;
                     setMoveDescription();
                     setNewState();
@@ -82,12 +84,12 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.right_arrow:
-                if(currentMoveNumber < numberOfWhiteMoves ||
-                        currentMoveNumber < numberOfBrownMoves) {
+                if(currentMoveNumber <= numberOfWhiteMoves ||
+                        currentMoveNumber <= numberOfBrownMoves) {
                     if(currentMoveNumber == 0) currentMoveNumber++;
                     else {
-                        if(!whiteToMove) currentMoveNumber++;
-                        /*if(currentMoveNumber != 1)*/ whiteToMove = !whiteToMove;
+                        if(!whiteToMove) currentMoveNumber++; //show next move (white)
+                        whiteToMove = !whiteToMove;
                     }
                     setMoveDescription();
                     setNewState();
@@ -104,14 +106,11 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
             Cursor cursor = db.query("GAMES", new String[]{"NAME", "WHITE", "BROWN", "BOARD"},
                     "NUMBER = ?", new String[]{Long.toString(gameNumber)}, null, null, null);
             cursor.moveToFirst();
-            game.setText(cursor.getString(0));
+            game.setText(cursor.getString(0)); //name of the game
             whiteMoves = cursor.getString(1);
             brownMoves = cursor.getString(2);
             boardStates = cursor.getString(3);
 
-            Log.v("White", whiteMoves);
-            Log.v("Brown", brownMoves);
-            Log.v("Board", boardStates);
             cursor.close();
             db.close();
 
@@ -181,15 +180,17 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
         else currentState = 2 * currentMoveNumber;
         int playableTileIndex = 0;
         for(int i=0; i<boardStates.length(); i++) {
-            if(boardStates.charAt(i) == '#') {
+            if(boardStates.charAt(i) == '#') { //# separates states and moves;
                 stateCounter++;
                 continue;
             }
 
             if(stateCounter == currentState) {
-                playableTile[playableTileIndex].setIsTaken
-                        (Character.getNumericValue(boardStates.charAt(i)));
-                Log.v("Tile", ""+playableTile[playableTileIndex].getIsTaken());
+                if(boardStates.charAt(i) == '=') playableTile[playableTileIndex].setIsTaken(-2); //black queen as one char
+                else {
+                    playableTile[playableTileIndex].setIsTaken
+                            (Character.getNumericValue(boardStates.charAt(i)));
+                }
                 playableTileIndex++;
                 if(playableTileIndex==50) break; //all tiles set
             }
@@ -203,7 +204,7 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
         String moveDesc = "";
         if(currentMoveNumber == 0) moveDescription.setText("");
         else {
-            if(whiteToMove) {
+            if(whiteToMove && currentMoveNumber <= numberOfWhiteMoves) {
                 for(int i=0; i<whiteMoves.length(); i++) {
                     if(whiteMoves.charAt(i) == '#') {
                         moveCounter++;
@@ -211,14 +212,14 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
                     }
 
                     if(moveCounter == currentMoveNumber) {
-                        moveDesc += whiteMoves.charAt(i);
+                        moveDesc += whiteMoves.charAt(i); //current move found
                     }
-                    else if(moveCounter > currentMoveNumber) break;
+                    else if(moveCounter > currentMoveNumber) break; //no need to search more
                 }
                 moveDescription.setText(getResources().getString(R.string.white_move, currentMoveNumber, moveDesc));
             }
 
-            else {
+            else if(!whiteToMove && currentMoveNumber <= numberOfBrownMoves){
                 for(int i=0; i<brownMoves.length(); i++) {
                     if(brownMoves.charAt(i) == '#') {
                         moveCounter++;

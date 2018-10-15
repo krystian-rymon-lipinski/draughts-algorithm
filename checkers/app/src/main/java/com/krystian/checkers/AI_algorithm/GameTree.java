@@ -5,14 +5,14 @@ import com.krystian.checkers.gameMechanics.PlayableTile;
 import java.util.ArrayList;
 
 public class GameTree {
-    private PlayableTile[] boardState = new PlayableTile[50];
+    private PlayableTile[] boardState = new PlayableTile[50]; //state zero - current one
     public ArrayList<Pawn> whiteState = new ArrayList<>();
     public ArrayList<Pawn> brownState = new ArrayList<>();
 
     public ArrayList<GameNode> gameNodeList = new ArrayList<>(); //all found nodes
     public ArrayList<GameNode> bestNodeList = new ArrayList<>(); //just the best ones
     private GameNode currentNode = null;
-    private boolean allNodesFound = false;
+    private boolean allNodesFound = false; //analysis complete; now an actual move can be made
 
     public ArrayList<Pawn> pawnToRestore = new ArrayList<>(); //if there was taking in gameNode, but there are others to check
     public ArrayList<Integer> restoringPawnIndex = new ArrayList<>();

@@ -8,7 +8,7 @@ public class DecisionTree { //possible paths of multiple or simple taking; one d
     private int takeLength;
     private int longestBranch;
     private TreeNode currentNode;
-    private TreeNode previousNode;
+    private TreeNode previousNode; //to know how to link not-bound nodes and make branches
     public ArrayList<TreeNode> nodeList = new ArrayList<>(); //not-bound nodes
     public ArrayList<ArrayList<Integer>> treeBranch = new ArrayList<>(); //bound nodes
 

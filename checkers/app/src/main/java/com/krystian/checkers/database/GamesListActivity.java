@@ -37,10 +37,9 @@ public class GamesListActivity extends ListActivity {
         try {
             GameDatabaseHelper dbHelper = new GameDatabaseHelper(this);
             db = dbHelper.getReadableDatabase();
-            cursor = db.query("GAMES", new String[]{"_id", "NAME"}, null, null, null, null, "NAME DESC");
+            cursor = db.query("GAMES", new String[]{"_id", "NAME"}, null, null, null, null, "NUMBER DESC");
             CursorAdapter listAdapter = new SimpleCursorAdapter(this, R.layout.listview_item,
                     cursor, new String[]{"NAME"}, new int[]{R.id.list_text}, 0);
-            Log.v("List size", ""+listAdapter.getCount());
             gamesList.setAdapter(listAdapter);
         } catch(SQLiteException e) {
             Toast.makeText(this, "Nie udało się nawiązać połączenia z bazą danych", Toast.LENGTH_SHORT).show();
@@ -58,7 +57,7 @@ public class GamesListActivity extends ListActivity {
 
     public void onDestroy() {
         super.onDestroy();
-        if(cursor != null) cursor.close();
+        cursor.close();
         db.close();
     }
 }

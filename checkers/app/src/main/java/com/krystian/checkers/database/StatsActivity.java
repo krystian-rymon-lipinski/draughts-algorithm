@@ -15,7 +15,6 @@ public class StatsActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        //TO DO: get numbers from database
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_stats);
 
@@ -41,10 +40,12 @@ public class StatsActivity extends AppCompatActivity {
             GameDatabaseHelper dbHelper = new GameDatabaseHelper(this);
             SQLiteDatabase db = dbHelper.getReadableDatabase();
             Cursor cursor = db.query("STATS", new String[] {"PLAYED", "WON"}, null, null, null, null, null);
+
             if(cursor.moveToFirst()) {
                 gamesStats[0] = cursor.getInt(0);
                 gamesStats[1] = cursor.getInt(1);
             }
+
             cursor.close();
             db.close();
 

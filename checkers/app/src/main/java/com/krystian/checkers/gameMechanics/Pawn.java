@@ -1,6 +1,6 @@
 package com.krystian.checkers.gameMechanics;
 
-public class Pawn extends java.lang.Object implements java.lang.Cloneable {
+public class Pawn  {
     private int position;
     private boolean isWhite;
     private boolean isQueen;
