@@ -18,7 +18,7 @@ public class GameDatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         Log.v("Db", "1");
-        db.execSQL("CREATE TABLE STATS (_id INTEGER PRIMARY KEY AUTOINCREMENT, PLAYED INTEGER, WON INTEGER)"); //smthg wrong here
+        db.execSQL("CREATE TABLE STATS (_id INTEGER PRIMARY KEY AUTOINCREMENT, PLAYED INTEGER, WON INTEGER)");
         Log.v("Db", "2");
         db.execSQL("CREATE TABLE GAMES (_id INTEGER PRIMARY KEY AUTOINCREMENT, NUMBER INTEGER, NAME TEXT, " +
                 "WHITE TEXT, BROWN TEXT, BOARD TEXT)");

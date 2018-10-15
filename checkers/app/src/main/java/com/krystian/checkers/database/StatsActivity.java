@@ -38,19 +38,13 @@ public class StatsActivity extends AppCompatActivity {
     public int[] getDatabaseStats() {
         int[] gamesStats = new int[2];
         try {
-            Log.v("Trying", "1");
             GameDatabaseHelper dbHelper = new GameDatabaseHelper(this);
-            Log.v("Trying", "2");
             SQLiteDatabase db = dbHelper.getReadableDatabase();
-            Log.v("Trying", "3");
             Cursor cursor = db.query("STATS", new String[] {"PLAYED", "WON"}, null, null, null, null, null);
-            Log.v("Trying", "4");
-
             if(cursor.moveToFirst()) {
                 gamesStats[0] = cursor.getInt(0);
                 gamesStats[1] = cursor.getInt(1);
             }
-            Log.v("Trying", "5");
             cursor.close();
             db.close();
 

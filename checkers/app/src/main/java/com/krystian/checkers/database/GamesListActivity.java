@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.CursorAdapter;
@@ -36,9 +37,10 @@ public class GamesListActivity extends ListActivity {
         try {
             GameDatabaseHelper dbHelper = new GameDatabaseHelper(this);
             db = dbHelper.getReadableDatabase();
-            cursor = db.query("GAMES", new String[]{"_id", "NAME"}, null, null, null, null, null);
+            cursor = db.query("GAMES", new String[]{"_id", "NAME"}, null, null, null, null, "NAME DESC");
             CursorAdapter listAdapter = new SimpleCursorAdapter(this, R.layout.listview_item,
-                    cursor, new String[]{"NAME"}, new int[]{android.R.id.text1}, 0);
+                    cursor, new String[]{"NAME"}, new int[]{R.id.list_text}, 0);
+            Log.v("List size", ""+listAdapter.getCount());
             gamesList.setAdapter(listAdapter);
         } catch(SQLiteException e) {
             Toast.makeText(this, "Nie udało się nawiązać połączenia z bazą danych", Toast.LENGTH_SHORT).show();

@@ -5,7 +5,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -30,11 +32,15 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
     GridLayout board;
     PlayableTile[] playableTile = new PlayableTile[NUMBER_OF_PLAYABLE_TILES];
     View[] playableTileView = new View[NUMBER_OF_PLAYABLE_TILES];
-    int gameNumber;
+    long gameNumber;
     int currentMoveNumber = 0;
+    int numberOfWhiteMoves = 0;
+    int numberOfBrownMoves = 0;
     boolean whiteToMove = true;
     TextView game;
     TextView moveDescription;
+    Button leftArrow;
+    Button rightArrow;
     String whiteMoves;
     String brownMoves;
     String boardStates;
@@ -45,10 +51,22 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
 
         board = (GridLayout) findViewById(R.id.board);
         game = (TextView) findViewById(R.id.game);
+        leftArrow = (Button) findViewById(R.id.left_arrow);
+        rightArrow = (Button) findViewById(R.id.right_arrow);
+        leftArrow.setOnClickListener(this);
+        rightArrow.setOnClickListener(this);
         moveDescription = (TextView) findViewById(R.id.move_description);
-        gameNumber = (Integer) getIntent().getExtras().get("GameNumber");
+        gameNumber = (long) getIntent().getExtras().get("GameNumber");
 
         getGameFromDatabase();
+
+        for(int i=0; i<whiteMoves.length(); i++) {
+            if(whiteMoves.charAt(i) == '#') numberOfWhiteMoves++;
+        }
+        for(int i=0; i<brownMoves.length(); i++) {
+            if(brownMoves.charAt(i) == '#') numberOfBrownMoves++;
+        }
+
         measureBoard();
     }
 
@@ -64,11 +82,18 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.right_arrow:
-                if(!whiteToMove) currentMoveNumber++;
-                whiteToMove = !whiteToMove;
-                setMoveDescription();
-                setNewState();
-                break;
+                if(currentMoveNumber < numberOfWhiteMoves ||
+                        currentMoveNumber < numberOfBrownMoves) {
+                    if(currentMoveNumber == 0) currentMoveNumber++;
+                    else {
+                        if(!whiteToMove) currentMoveNumber++;
+                        /*if(currentMoveNumber != 1)*/ whiteToMove = !whiteToMove;
+                    }
+                    setMoveDescription();
+                    setNewState();
+                    break;
+                }
+
         }
     }
 
@@ -77,12 +102,16 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
             GameDatabaseHelper dbHelper = new GameDatabaseHelper(this);
             SQLiteDatabase db = dbHelper.getReadableDatabase();
             Cursor cursor = db.query("GAMES", new String[]{"NAME", "WHITE", "BROWN", "BOARD"},
-                    "NUMBER = ?", new String[]{Integer.toString(gameNumber)}, null, null, null);
+                    "NUMBER = ?", new String[]{Long.toString(gameNumber)}, null, null, null);
+            cursor.moveToFirst();
             game.setText(cursor.getString(0));
             whiteMoves = cursor.getString(1);
             brownMoves = cursor.getString(2);
             boardStates = cursor.getString(3);
 
+            Log.v("White", whiteMoves);
+            Log.v("Brown", brownMoves);
+            Log.v("Board", boardStates);
             cursor.close();
             db.close();
 
@@ -146,22 +175,25 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
     }
 
     public void setNewState() {
-        int moveCounter = 1;
+        int stateCounter = 0;
+        int currentState;
+        if(whiteToMove) currentState = 2 * currentMoveNumber - 1;
+        else currentState = 2 * currentMoveNumber;
         int playableTileIndex = 0;
         for(int i=0; i<boardStates.length(); i++) {
             if(boardStates.charAt(i) == '#') {
-                moveCounter++;
+                stateCounter++;
                 continue;
             }
 
-            if(moveCounter == currentMoveNumber) {
-                playableTile[playableTileIndex].setIsTaken(boardStates.charAt(i));
+            if(stateCounter == currentState) {
+                playableTile[playableTileIndex].setIsTaken
+                        (Character.getNumericValue(boardStates.charAt(i)));
+                Log.v("Tile", ""+playableTile[playableTileIndex].getIsTaken());
                 playableTileIndex++;
+                if(playableTileIndex==50) break; //all tiles set
             }
-            else if(moveCounter > currentMoveNumber) break;
-
-
-
+            else if(stateCounter > currentState) break;
         }
         drawPawns();
     }
@@ -169,31 +201,38 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
     public void setMoveDescription() {
         int moveCounter = 1;
         String moveDesc = "";
-
-        if(whiteToMove) {
-            for(int i=0; i<whiteMoves.length(); i++) {
-                if(whiteMoves.charAt(i) == '#') {
-                    moveCounter++;
-                    continue;
-                }
-
-                if(moveCounter == currentMoveNumber) moveDesc += whiteMoves.charAt(i);
-                else if(moveCounter > currentMoveNumber) break;
-            }
-            moveDescription.setText(moveDesc);
-        }
-
+        if(currentMoveNumber == 0) moveDescription.setText("");
         else {
-            for(int i=0; i<brownMoves.length(); i++) {
-                if(brownMoves.charAt(i) == '#') {
-                    moveCounter++;
-                    continue;
-                }
+            if(whiteToMove) {
+                for(int i=0; i<whiteMoves.length(); i++) {
+                    if(whiteMoves.charAt(i) == '#') {
+                        moveCounter++;
+                        continue;
+                    }
 
-                if(moveCounter == currentMoveNumber) moveDesc += brownMoves.charAt(i);
-                else if(moveCounter > currentMoveNumber) break;
+                    if(moveCounter == currentMoveNumber) {
+                        moveDesc += whiteMoves.charAt(i);
+                    }
+                    else if(moveCounter > currentMoveNumber) break;
+                }
+                moveDescription.setText(getResources().getString(R.string.white_move, currentMoveNumber, moveDesc));
             }
-            moveDescription.setText(moveDesc);
+
+            else {
+                for(int i=0; i<brownMoves.length(); i++) {
+                    if(brownMoves.charAt(i) == '#') {
+                        moveCounter++;
+                        continue;
+                    }
+
+                    if(moveCounter == currentMoveNumber) {
+                        moveDesc += brownMoves.charAt(i);
+                    }
+                    else if(moveCounter > currentMoveNumber) break;
+                }
+                moveDescription.setText(getResources().getString(R.string.brown_move, currentMoveNumber, moveDesc));
+            }
         }
+
     }
 }

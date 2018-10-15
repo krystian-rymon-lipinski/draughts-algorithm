@@ -114,10 +114,20 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             brownPawn.add(new Pawn( i+1, false, false));
         }
         for(int i=0; i<NUMBER_OF_PLAYABLE_TILES; i++) { //create playableTiles
-            if(i>=0 && i < 20) playableTile[i] = new PlayableTile((i+1), -1); //-1 is brown pawn
-            else if(i>=30 && i <50) playableTile[i] = new PlayableTile((i+1), 1); //1 is white pawn
-            else playableTile[i] = new PlayableTile((i+1), 0); //0 means tile is empty
+            if(i>=0 && i < 20) {
+                playableTile[i] = new PlayableTile((i+1), -1); //-1 is brown pawn
+                boardStates += "-"; //it will count as -1, but with only one character
+            }
+            else if(i>=30 && i <50) {
+                playableTile[i] = new PlayableTile((i+1), 1); //1 is white pawn
+                boardStates += "1";
+            }
+            else {
+                playableTile[i] = new PlayableTile((i+1), 0); //0 means tile is empty
+                boardStates += "0";
+            }
         }
+        boardStates += "#";
         drawPawns();
     }
 
@@ -129,6 +139,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             else if(playableTile[i].getIsTaken() == -2) playableTileView[i].setBackgroundResource(R.drawable.brown_queen);
             else playableTileView[i].setBackgroundResource(0);
         }
+
 
         int longestTake = 0;
         if(whitePawn.size() != 0 && brownPawn.size() != 0) checkForMoves();
@@ -185,11 +196,9 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 int gamesWon = cursor.getInt(1);
                 if(whitePawn.size() == 0) {
                     Toast.makeText(this, "Przegrana!", Toast.LENGTH_SHORT).show();
-                    brownMoves += "X"; //notation for the end of a game
                 }
                 else if(brownPawn.size() == 0) {
                     Toast.makeText(this, "Wygrana!", Toast.LENGTH_SHORT).show();
-                    whiteMoves += "X";
                     gamesWon++;
                 }
                 ContentValues statsUpdate = new ContentValues();
@@ -313,6 +322,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         chosenPawn = chosenNode.getPawn();
 
         if(!chosenNode.getIsThereTaking()) {
+            mandatoryPawn = false;
             possibleMove.add(chosenNode.moveList.get(0));
             Log.v("Pawn moved", ""+chosenPawn.getPosition());
             Log.v("Move done", ""+chosenNode.moveList.get(0));
@@ -780,7 +790,8 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         takeNumber = 0;
         if(gameTree == null) { //making move
             for(PlayableTile tile : playableTile) {
-                boardStates += tile.getIsTaken();
+                if(tile.getIsTaken() == -1) boardStates += "-";
+                else boardStates += Integer.toString(tile.getIsTaken()); //1 or 0 - it's one character as opposed to -1
             }
             boardStates += "#"; //end of one state to know where to read it from database
             if(whiteMove) whiteMoves += "#";

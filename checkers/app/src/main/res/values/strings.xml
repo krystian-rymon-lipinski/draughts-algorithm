@@ -18,5 +18,7 @@
     <!-- GameReview Acticity -->
     <string name="backward_arrow"> \u003c  </string>
     <string name="forward_arrow"> \u003e </string>
+    <string name="white_move">%1$d. %2$s</string>
+    <string name="brown_move">%1$d. \u2026 %2$s</string>
 
 </resources>
