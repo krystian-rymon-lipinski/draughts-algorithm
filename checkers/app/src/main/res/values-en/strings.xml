@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Checkers</string>
+    <string name="analysis_name">Analysis</string>
+    <string name="games_history_button">Games history</string>
+    <string name="games_played">Games played:</string>
+    <string name="games_won">Results (W/D/L):</string>
+    <string name="play_button">Play</string>
+    <string name="stats_button">Statistics</string>
+    <string name="stats_name">Statistics</string>
+    <string name="win_percentage">Results in %</string>
+    <string name="database_unavailable">Database is unavailable</string>
+    <string name="game_drawn">Draw!</string>
+    <string name="game_lost">You lost!</string>
+    <string name="game_won">You won!</string>
+    <string name="moves_to_draw">%1$d / 25 moves to draw</string>
+    <string name="thread_error">An error occured</string>
+    <string name="another_pawn_to_move">Another pawn should be moved</string>
+</resources>

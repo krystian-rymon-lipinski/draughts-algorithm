@@ -42,7 +42,7 @@ public class GamesListActivity extends ListActivity {
                     cursor, new String[]{"NAME"}, new int[]{R.id.list_text}, 0);
             gamesList.setAdapter(listAdapter);
         } catch(SQLiteException e) {
-            Toast.makeText(this, "Nie udało się nawiązać połączenia z bazą danych", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.database_unavailable, Toast.LENGTH_SHORT).show();
         }
     }
 

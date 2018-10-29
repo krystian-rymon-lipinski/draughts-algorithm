@@ -10,15 +10,24 @@
 
     <!-- Stats Activity -->
     <string name="games_played">Ilość gier:</string>
-    <string name="games_won">Ilość wygranych:</string>
-    <string name="win_percentage">Procent wygranych:</string>
-    <string name="stats_number">%1$d</string>
-    <string name="stats_percent">%1$.2f%%</string>
+    <string name="games_won">Rozkład (Z/R/P):</string>
+    <string name="win_percentage">Rozkład w %:</string>
+    <string name="games_number" translatable="false">%1$d</string>
+    <string name="stats_number" translatable="false">%1$d / %2$d / %3$d</string>
+    <string name="stats_percent" translatable="false">%1$.2f / %2$.2f / %3$.2f</string>
 
-    <!-- GameReview Acticity -->
-    <string name="backward_arrow"> \u003c  </string>
-    <string name="forward_arrow"> \u003e </string>
-    <string name="white_move">%1$d. %2$s</string>
-    <string name="brown_move">%1$d. \u2026 %2$s</string>
+    <!-- GameReview Activity -->
+    <string name="backward_arrow" translatable="false"> \u003c  </string>
+    <string name="forward_arrow" translatable="false"> \u003e </string>
+    <string name="white_move" translatable="false">%1$d. %2$s</string>
+    <string name="brown_move" translatable="false">%1$d. \u2026 %2$s</string>
+
+    <!-- Game Toasts -->
+    <string name="game_won">Wygrana!</string>
+    <string name="game_drawn">Remis!</string>
+    <string name="game_lost">Przegrana!</string>
+    <string name="moves_to_draw">%1$d / 25 ruchów do remisu </string>
+    <string name="database_unavailable">Baza danych niedostępna</string>
+    <string name="another_pawn_to_move">Inny pion powinien ruszyć</string>
 
 </resources>

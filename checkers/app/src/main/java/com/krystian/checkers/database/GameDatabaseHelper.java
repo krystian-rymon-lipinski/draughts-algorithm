@@ -17,12 +17,15 @@ public class GameDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE STATS (_id INTEGER PRIMARY KEY AUTOINCREMENT, PLAYED INTEGER, WON INTEGER)");
+        db.execSQL("CREATE TABLE STATS (_id INTEGER PRIMARY KEY AUTOINCREMENT, PLAYED INTEGER, WON INTEGER," +
+                "DRAWN INTEGER, LOST INTEGER)");
         db.execSQL("CREATE TABLE GAMES (_id INTEGER PRIMARY KEY AUTOINCREMENT, NUMBER INTEGER, NAME TEXT, " +
                 "WHITE TEXT, BROWN TEXT, BOARD TEXT)");
         ContentValues stats = new ContentValues();
         stats.put("PLAYED", 0); //no games played yet
         stats.put("WON", 0);
+        stats.put("DRAWN", 0);
+        stats.put("LOST", 0);
         db.insert("STATS", null, stats);
     }
 

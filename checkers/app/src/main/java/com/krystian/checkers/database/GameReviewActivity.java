@@ -36,7 +36,7 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
     int currentMoveNumber = 0;
     int numberOfWhiteMoves = 0; //from specific (chosen) game
     int numberOfBrownMoves = 0;
-    boolean whiteToMove = true;
+    boolean whiteToMove = false;
     TextView game;
     TextView moveDescription;
     Button leftArrow;
@@ -63,11 +63,9 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
         for(int i=0; i<whiteMoves.length(); i++) {
             if(whiteMoves.charAt(i) == '#') numberOfWhiteMoves++;
         }
-        Log.v("White moves", ""+numberOfWhiteMoves);
         for(int i=0; i<brownMoves.length(); i++) {
             if(brownMoves.charAt(i) == '#') numberOfBrownMoves++;
         }
-        Log.v("Brown moves", ""+numberOfBrownMoves);
 
         measureBoard();
     }
@@ -84,18 +82,16 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
                 }
                 break;
             case R.id.right_arrow:
-                if(currentMoveNumber <= numberOfWhiteMoves ||
-                        currentMoveNumber <= numberOfBrownMoves) {
-                    if(currentMoveNumber == 0) currentMoveNumber++;
-                    else {
-                        if(!whiteToMove) currentMoveNumber++; //show next move (white)
-                        whiteToMove = !whiteToMove;
-                    }
+                if(currentMoveNumber < numberOfWhiteMoves ||
+                        (currentMoveNumber <= numberOfBrownMoves && whiteToMove)) {
+                    if(!whiteToMove)
+                        currentMoveNumber++; //show next move (white)
+                    whiteToMove = !whiteToMove; //don't go beyond the last board state - even with colors
+
                     setMoveDescription();
                     setNewState();
                     break;
                 }
-
         }
     }
 
@@ -115,7 +111,7 @@ public class GameReviewActivity extends AppCompatActivity implements View.OnClic
             db.close();
 
         } catch(SQLiteException e) {
-            Toast.makeText(this, "Nie udało się połączyć z bazą danych", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.database_unavailable, Toast.LENGTH_SHORT).show();
         }
 
     }

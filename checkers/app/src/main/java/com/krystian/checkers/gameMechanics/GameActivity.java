@@ -13,25 +13,29 @@
                                 | 46|   | 47|   | 48|   | 49|   | 50|   |
                                                   white
 
-    Rules in this specific variant:
+    Rules in implemented game variant:
     - taking pawns (if possible) is mandatory;
     - longest take is mandatory - doesn't matter if it's a queen or not
-    - pawn becomes queen if it ENDS its move on promotion tile - not if it steps on it and then goes back
+    - pawn becomes queen if it ENDS its move on promotion tile - not if it steps on it and then goes on
     - queens can move through the entire diagonal
-    - queens don't have to wait - they can move even if there are non-queen pawns of the same color
+    - queens don't have to wait - they can move even if there are non-queen pawns of the same color on the board
+    - game is drawn when there are 25 consecutive moves without take or moving regular pawn (not-queen)
+
+    Specific rules can be found here:
+    https://www.fmjd.org/?p=v-100
 
     Implemented features:
     1. Basic layouts and graphics for board and pawns.
     2. Game Mechanics - moves and takes for pawn and queen
-    3. Pawn Tree - checking which move has to be made due to the rules
+    3. Pawn Tree - checking which move has to be made (or can be - if there's no takes) according to the rules
     4. Game Tree - checking which moves for brown are stupid and should not be considered
-    5. Adding results after a game to database
-
+    5. Checking when the game ends (and with what result) and adding its results to database
 
     Much needed improvements:
     1. Fixing two bugs in game mechanics with GameTree and multiple taking
     2. Game over not only after taking all of white/brown pawn - if all of them are blocked it is also loss
-    3. Add a possibility to draw the game - if there is no take or ordinary pawn move during n moves
+    3. Sleep a thread after player move (or launch a new one) to set a pause between player's move and cpu's answer in order to
+    clearly see the move.
 
     Further development:
     1. Add a possibility to pick a color (in some kind of menu; choice implemented with SharedPreferences)
@@ -39,7 +43,7 @@
     in AsyncTask then - to refresh white move (and layout as a whole)
     instantly instead of waiting for a few hundreds of Game Nodes to calculate in main thread
     3. Improve graphics - especially add numbers of tiles which will help in game analysis. Also change
-    at least queen graphics.
+    at least queen graphics to something more distinguishable. Probably not as Drawable .xml file.
     */
 
 package com.krystian.checkers.gameMechanics;
@@ -50,8 +54,10 @@ import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
+import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.GridLayout;
 import android.widget.LinearLayout;
@@ -75,7 +81,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     GridLayout board;
     View[] playableTileView = new View[NUMBER_OF_PLAYABLE_TILES];
     PlayableTile[] playableTile = new PlayableTile[NUMBER_OF_PLAYABLE_TILES];
-    int[][] diagonal = new int[19][]; //for queen moves
+    int[][] diagonal = new int[19][]; //sequences of tiles for queen moves
     ArrayList<Pawn> whitePawn = new ArrayList<>();
     ArrayList<Pawn> brownPawn = new ArrayList<>();
     ArrayList<Integer> possibleMove = new ArrayList<>();
@@ -86,6 +92,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
     boolean mandatoryPawn = false; //is there a pawn (or more) that has to take another one(s)?
 
     int takeNumber = 0; //to show possible moves during multiple taking (if there are more branches from specific node)
+    int drawCounter = 0;
     GameTree gameTree = null; //to check moves for cpu
 
     String whiteMoves = ""; //for database saving using checkers notation
@@ -168,11 +175,12 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             else playableTileView[i].setBackgroundResource(0);
         }
 
-        checkGameState();
-        if(whitePawn.size() != 0 && brownPawn.size() != 0) checkForMoves();
+        //checkGameState();
+        //if(whitePawn.size() != 0 && brownPawn.size() != 0) checkForMoves();
+        if(!checkGameState()) checkForMoves();
     }
 
-    public void markPawn(Pawn wPawn, int position) {
+    public void markPawn(Pawn wPawn, int position) { //done after onClick
         playableTileView[wPawn.getPosition() - 1].getBackground().setAlpha(255);
         if (wPawn.getPosition() == position) {
             if(whiteMove) {
@@ -187,11 +195,12 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
             playableTileView[wPawn.getPosition() - 1].getBackground().setAlpha(70);
             chosenPawn = wPawn;
             checkPossibleMoves(wPawn);
+            if(possibleMove.size() == 0) Toast.makeText(this, R.string.another_pawn_to_move, Toast.LENGTH_SHORT).show();
         }
     }
 
     public void markPossibleMove() {
-        for(View tile : playableTileView) {  //mark legal moves
+        for(View tile : playableTileView) {  //mark legal moves for clicked pawn
             if (playableTile[tile.getId()-1].getIsTaken() == 0)
                 tile.setBackgroundColor(getResources().getColor(R.color.brownTile)); //un-mark possible moves if just switching pawn
             for (Integer move : possibleMove)
@@ -204,26 +213,36 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
     /* ====================================== 5. Database ========================= */
 
-    public void checkGameState() {
+    public boolean checkGameState() {
 
-        if(whitePawn.size() == 0 || brownPawn.size() == 0) { //a game just ended
+        if(whitePawn.size() == 0 || brownPawn.size() == 0 || drawCounter == 25) { //a game just ended
             try {
                 GameDatabaseHelper dbHelper = new GameDatabaseHelper(this);
                 SQLiteDatabase db = dbHelper.getWritableDatabase();
-                Cursor cursor = db.query("STATS", new String[]{"PLAYED", "WON"}, null, null, null, null, null);
+                Cursor cursor = db.query("STATS", new String[]{"PLAYED", "WON", "DRAWN", "LOST"},
+                        null, null, null, null, null);
                 cursor.moveToFirst();
-                int gamesPlayed = cursor.getInt(0) + 1; //just finished game - need to update database
-                int gamesWon = cursor.getInt(1);
+                ContentValues statsUpdate = new ContentValues();
+                int gameUpdate;
+
                 if(whitePawn.size() == 0) {
-                    Toast.makeText(this, "Przegrana!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.game_lost, Toast.LENGTH_SHORT).show();
+                    gameUpdate = cursor.getInt(3) + 1;
+                    statsUpdate.put("LOST", gameUpdate);
                 }
                 else if(brownPawn.size() == 0) {
-                    Toast.makeText(this, "Wygrana!", Toast.LENGTH_SHORT).show();
-                    gamesWon++;
+                    Toast.makeText(this, R.string.game_won, Toast.LENGTH_SHORT).show();
+                    gameUpdate = cursor.getInt(1) + 1;
+                    statsUpdate.put("WON", gameUpdate);
                 }
-                ContentValues statsUpdate = new ContentValues();
+
+                else if(drawCounter == 25) {
+                    Toast.makeText(this, R.string.game_drawn, Toast.LENGTH_SHORT).show();
+                    gameUpdate = cursor.getInt(2) + 1;
+                    statsUpdate.put("DRAWN", gameUpdate);
+                }
+                int gamesPlayed = cursor.getInt(0) + 1; //just finished game - need to update database
                 statsUpdate.put("PLAYED", gamesPlayed);
-                statsUpdate.put("WON", gamesWon);
                 db.update("STATS", statsUpdate, null, null); //update games number (only one record in this table)
 
                 long gameIndex = DatabaseUtils.queryNumEntries(db, "GAMES") + 1;
@@ -239,15 +258,19 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                 db.close();
 
             } catch(SQLiteException e) {
-                Toast.makeText(this, "Brak dostępu do bazy danych", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.database_unavailable, Toast.LENGTH_SHORT).show();
             }
             startActivity(new Intent(this, com.krystian.checkers.MainActivity.class));
+            return true;
         }
+        else return false;
     }
 
     /* ======================================================================================= */
 
     public void checkForMoves() {
+        //Can a pawn take another one? There can be more possibilities and if so - choose the longest ones (as
+        // it is stated in game rules) and make sure the rest of the pawns cannot be moved.
         int longestTake = 0;
         ArrayList<Pawn> pawnColor;
 
@@ -257,24 +280,53 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         for(Pawn pawn : pawnColor) {
             pawn.setPawnTree(new DecisionTree(pawn.getPosition()));
             consideredPawn = pawn;
-            if(whiteMove) checkMandatoryMove(pawn.getPosition(), -1);
+            if(whiteMove) checkMandatoryMove(pawn.getPosition(), -1); //check for takes
             else checkMandatoryMove(pawn.getPosition(), 1);
 
             if(mandatoryPawn) {
                 if(consideredPawn.getPawnTree() != null) { //there is a branch then
                     takeLongestBranch();
                     if(consideredPawn.getPawnTree().getLongestBranch() >= longestTake) {
-                        longestTake = consideredPawn.getPawnTree().getLongestBranch();
+                        longestTake = consideredPawn.getPawnTree().getLongestBranch(); //longest branch for a pawn
                     }
                 }
             }
         }
-        chooseFinalPawn(longestTake);
+        chooseFinalPawn(longestTake); //check all pawns' longest branches and take only the longest one
         if(whiteMove && gameTree != null) gameTree.getCurrentNode().setLengthOfWhiteTaking(longestTake);
-        else if(!whiteMove && gameTree == null) checkForBestMove();
+        else if(!whiteMove && gameTree == null) {
+            checkForBestMove();
+            makeCpuMove();
+        }
     }
 
     /* ========================== 4. Game Tree ========================== */
+
+    public void makeCpuMove() {
+
+        Random rand = new Random();
+        int r = rand.nextInt(gameTree.bestNodeList.size());
+        GameNode chosenNode = gameTree.bestNodeList.get(r);
+        resetBoardState(); //go back to current state to make a proper move
+        chosenPawn = chosenNode.getPawn();
+
+        if(!chosenNode.getIsThereTaking()) {
+            mandatoryPawn = false;
+            possibleMove.add(chosenNode.moveList.get(0));
+            makeMove(chosenNode.moveList.get(0)); //make proper move as brown
+        }
+        else {
+            mandatoryPawn = true;
+            for(Integer move : chosenNode.moveList) {
+                takeNumber = chosenNode.moveList.indexOf(move);
+                possibleMove.add(move);
+                makeMove(move); //make proper take(s) as brown
+            }
+        }
+
+        gameTree = null; //all checked and move made - tree is not needed anymore
+        endMove(); //switch colors - it's white to move now
+    }
 
     public PlayableTile[] createBoardDeepCopy(PlayableTile[] board) {
         PlayableTile[] currentBoard = new PlayableTile[50];
@@ -315,30 +367,6 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
         checkGameNodes(); //find the situation after such moves
         chooseBestGameNode(); //and assess which move is best (or rather which are the worst and should not be considered
         gameTree.setAllNodesFound(true);
-
-
-        Random rand = new Random();
-        int r = rand.nextInt(gameTree.bestNodeList.size());
-        GameNode chosenNode = gameTree.bestNodeList.get(r);
-        resetBoardState(); //go back to current state to make a proper move
-        chosenPawn = chosenNode.getPawn();
-
-        if(!chosenNode.getIsThereTaking()) {
-            mandatoryPawn = false;
-            possibleMove.add(chosenNode.moveList.get(0));
-            makeMove(chosenNode.moveList.get(0)); //make proper move as brown
-        }
-        else {
-            mandatoryPawn = true;
-            for(Integer move : chosenNode.moveList) {
-                takeNumber = chosenNode.moveList.indexOf(move);
-                possibleMove.add(move);
-                makeMove(move); //make proper take(s) as brown
-            }
-        }
-
-        gameTree = null; //all checked and move made - tree is not needed anymore
-        endMove();
     }
 
     public void searchForNodes(ArrayList<Pawn> pawnColor, GameTree gameTree) {
@@ -393,7 +421,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
                     possibleMove.clear();
                 }
             }
-            endMove();
+            endMove(); //brown just make a move, check what white can do in response
             checkForMoves(); //check if white can take after just considered move
             if(mandatoryPawn) gameTree.getCurrentNode().setCanWhiteTakeAfter(true);
             else gameTree.getCurrentNode().setCanWhiteTakeAfter(false);
@@ -697,6 +725,7 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
                     }
                     addMoveToDatabase(destination); //but to a global variable first
+                    updateDrawCounter();
                     chosenPawn.setPosition(destination);
                     validMove = true;
                     break;
@@ -730,6 +759,20 @@ public class GameActivity extends AppCompatActivity implements View.OnClickListe
 
             if(whiteMove) whiteMoves += move;
             else brownMoves += move;
+        }
+    }
+
+    public void updateDrawCounter() {
+        if(gameTree == null || gameTree.getAllNodesFound()) { //it's either player's move or final decision for cpu
+            if(mandatoryPawn) drawCounter = 0; //there was taking
+            else {
+                if(!chosenPawn.getIsQueen()) drawCounter = 0;
+                else drawCounter++;
+            }
+
+            if(drawCounter >= 5 && drawCounter <= 24)
+                Toast.makeText(this, this.getString(R.string.moves_to_draw, drawCounter),
+                        Toast.LENGTH_SHORT).show();
         }
     }
 
